@@ -5,11 +5,12 @@ export const workflowQueue = new Queue("workflow-execution", {
 	connection,
 });
 
-export const enqueueWorkflow = async (workflowId, metadata = {}) => {
+export const enqueueWorkflow = async (workflowId, runId, metadata = {}) => {
 	await workflowQueue.add(
 		"run-graph",
 		{
 			workflowId,
+			runId,
 			metadata,
 		},
 		{

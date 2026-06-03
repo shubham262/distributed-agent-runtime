@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import db from "../models/index.js";
 import { enqueueWorkflow } from "../queue/index.js";
 
-const { Workflow } = db;
+const { Workflow, WorkflowRun } = db;
 
 export const createWorkflow = async (req, res) => {
 	try {
@@ -158,10 +158,20 @@ export const executeWorkflow = async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { metadata = {} } = req.body;
-		await enqueueWorkflow(id, metadata);
+		const userId = req.user?.id || "anonymous_user";
+		const newRun = new WorkflowRun({
+			workflowId: id,
+			userId,
+			status: "QUEUED",
+			logs: [{ action: "Workflow execution initialized and added to queue." }],
+		});
+		await newRun.save();
+		const runId = newRun._id.toString();
+		await enqueueWorkflow(id, runId, metadata);
 		res.status(202).json({
 			success: true,
 			message: "Workflow job queued for background processing execution.",
+			runId: runId,
 		});
 	} catch (error) {
 		console.error("Error executing workflow:", error);
