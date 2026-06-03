@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import db from "../models/index.js";
+import { enqueueWorkflow } from "../queue/index.js";
 
 const { Workflow } = db;
 
@@ -48,6 +49,7 @@ export const createWorkflow = async (req, res) => {
 		const savedWorkflow = await newWorkflow.save();
 		res.status(201).json(savedWorkflow);
 	} catch (error) {
+		console.error("Error creating workflow:", error);
 		res.status(500).json({ error: error.message });
 	}
 };
@@ -60,6 +62,7 @@ export const getWorkflows = async (req, res) => {
 
 		res.status(200).json(workflows);
 	} catch (error) {
+		console.error("Error fetching workflows:", error);
 		res.status(500).json({ error: error.message });
 	}
 };
@@ -118,6 +121,7 @@ export const updateWorkflow = async (req, res) => {
 
 		res.status(200).json(updatedWorkflow);
 	} catch (error) {
+		console.error("Error updating workflow:", error);
 		res.status(500).json({ error: error.message });
 	}
 };
@@ -145,6 +149,22 @@ export const deleteWorkflow = async (req, res) => {
 			deletedWorkflowId: id,
 		});
 	} catch (error) {
+		console.error("Error deleting workflow:", error);
+		res.status(500).json({ error: error.message });
+	}
+};
+
+export const executeWorkflow = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { metadata = {} } = req.body;
+		await enqueueWorkflow(id, metadata);
+		res.status(202).json({
+			success: true,
+			message: "Workflow job queued for background processing execution.",
+		});
+	} catch (error) {
+		console.error("Error executing workflow:", error);
 		res.status(500).json({ error: error.message });
 	}
 };
