@@ -5,6 +5,11 @@ const workflowSchema = new mongoose.Schema(
 		name: { type: String, required: true },
 		description: { type: String },
 		isActive: { type: Boolean, default: true },
+		userId: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "User",
+			required: true,
+		},
 
 		uiGraph: { type: mongoose.Schema.Types.Mixed, required: true },
 

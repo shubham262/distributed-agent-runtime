@@ -1,6 +1,8 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/immutability */
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
 	Button,
 	Modal,
@@ -28,41 +30,24 @@ import {
 	FiActivity,
 } from "react-icons/fi";
 import CreateAgentModal from "@/components/dashboard/CreateAgentModal";
+import {
+	createAgent,
+	deleteAgent,
+	editAgent,
+	getAllAgent,
+} from "@/service/agent";
 
 const Agents = () => {
 	const [form] = Form.useForm();
 
-	// --- UI State Management ---
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [editingAgent, setEditingAgent] = useState(null);
 
-	// --- Simulated Mock Database for testing ---
-	const [agents, setAgents] = useState([
-		{
-			id: "agent_1",
-			name: "Trend Scraper",
-			role: "Market Researcher",
-			systemPrompt:
-				"You scrape global technology trends and compile them into clean markdown summaries.",
-			model: "gpt-4o-mini",
-			tools: ["web-search", "extract-html"],
-			memory: true,
-			maxTokens: 2000,
-			status: "IDLE", // IDLE or RUNNING
-		},
-		{
-			id: "agent_2",
-			name: "Copy Editor",
-			role: "Content Optimizer",
-			systemPrompt:
-				"Review raw text scripts, correct grammatical issues, and optimize for high SEO visibility.",
-			model: "gpt-4o-mini",
-			tools: ["seo-analyzer"],
-			memory: false,
-			maxTokens: 1500,
-			status: "RUNNING", // Simulating an active running process
-		},
-	]);
+	const [agents, setAgents] = useState([]);
+
+	useEffect(() => {
+		getAllAgents();
+	}, []);
 
 	// Available tools registry to select from
 	const availableTools = [
@@ -85,30 +70,52 @@ const Agents = () => {
 		setIsModalOpen(true);
 	};
 
-	const handleFormSubmit = (values) => {
-		if (editingAgent) {
-			// Edit Mode
-			setAgents(
-				agents.map((a) => (a.id === editingAgent.id ? { ...a, ...values } : a))
-			);
-			message.success(`Agent "${values.name}" updated successfully.`);
-		} else {
-			// Create Mode
-			const newAgent = {
-				id: `agent_${Date.now()}`,
-				...values,
-				status: "IDLE",
-			};
-			setAgents([...agents, newAgent]);
-			message.success(`Agent "${values.name}" deployed to pool.`);
+	const getAllAgents = useCallback(async () => {
+		try {
+			const response = await getAllAgent();
+			setAgents(response);
+		} catch (error) {
+			message.error("An error occurred while fetching agents.");
+			console.error("Agent Save Error:", error);
 		}
-		setIsModalOpen(false);
+	}, []);
+
+	const handleFormSubmit = async (values) => {
+		try {
+			if (editingAgent) {
+				await editAgent(editingAgent._id, values);
+				setAgents(
+					agents.map((a) =>
+						a.id === editingAgent._id ? { ...a, ...values } : a
+					)
+				);
+				message.success(`Agent "${values.name}" updated successfully.`);
+			} else {
+				const payload = {
+					...values,
+				};
+				const newAgent = await createAgent(payload);
+				setAgents([...agents, newAgent]);
+				message.success(`Agent "${values.name}" deployed to pool.`);
+			}
+		} catch (error) {
+			message.error("An error occurred while saving the agent.");
+			console.error("Agent handleFormSubmit==>:", error);
+		} finally {
+			setIsModalOpen(false);
+		}
 	};
 
-	const handleDeleteAgent = (id, name) => {
-		setAgents(agents.filter((a) => a.id !== id));
-		message.success(`Agent "${name}" deleted.`);
-	};
+	const handleDeleteAgent = useCallback(async (id, name) => {
+		try {
+			await deleteAgent(id);
+			setAgents(agents.filter((a) => a._id !== id));
+			message.success(`Agent "${name}" deleted.`);
+		} catch (error) {
+			message.error("An error occurred while deleting the agent.");
+			console.error("Agent==>handleDeleteAgent :", error);
+		}
+	}, []);
 
 	const handleTogglePlayPause = (id) => {
 		setAgents(
@@ -150,7 +157,7 @@ const Agents = () => {
 			<div className="w-full flex flex-col md:flex-row flex-wrap gap-6 items-stretch">
 				{agents.map((agent) => (
 					<div
-						key={agent.id}
+						key={agent._id}
 						className="w-full md:w-[calc(50%-12px)] xl:w-[calc(33.33%-16px)] bg-white border border-slate-100 rounded-xl p-5 shadow-sm hover:border-slate-200 transition-all flex flex-col justify-between"
 					>
 						{/* Upper Section: Core Info */}
@@ -261,7 +268,7 @@ const Agents = () => {
 									classNames={{
 										content: "flex items-center gap-2",
 									}}
-									onClick={() => handleTogglePlayPause(agent.id)}
+									onClick={() => handleTogglePlayPause(agent._id)}
 								>
 									{agent.status === "RUNNING" ? (
 										<>
@@ -289,7 +296,7 @@ const Agents = () => {
 								<Popconfirm
 									title="Decommission Agent"
 									description={`Are you sure you want to remove "${agent.name}"?`}
-									onConfirm={() => handleDeleteAgent(agent.id, agent.name)}
+									onConfirm={() => handleDeleteAgent(agent._id, agent.name)}
 									okText="Yes, delete"
 									cancelText="No"
 									okButtonProps={{ danger: true }}

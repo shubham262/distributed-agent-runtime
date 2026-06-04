@@ -6,7 +6,7 @@ const { Agent } = db;
 export const createAgent = async (req, res) => {
 	try {
 		const { name, role, systemPrompt, model, tools, channels } = req.body;
-
+		const userId = req.user.id;
 		if (!name || name.trim() === "") {
 			return res.status(400).json({
 				error:
@@ -26,8 +26,6 @@ export const createAgent = async (req, res) => {
 			});
 		}
 
-		
-
 		const newAgent = new Agent({
 			name: name.trim(),
 			role: role.trim(),
@@ -35,6 +33,7 @@ export const createAgent = async (req, res) => {
 			model: model || "gpt-4o-mini",
 			tools: tools || [],
 			channels: channels || [],
+			userId,
 		});
 
 		const savedAgent = await newAgent.save();
@@ -46,7 +45,10 @@ export const createAgent = async (req, res) => {
 
 export const getAgents = async (req, res) => {
 	try {
-		const agents = await Agent.find().sort({ createdAt: -1 });
+		const userId = req.user.id;
+		const agents = await Agent.find({
+			userId,
+		}).sort({ createdAt: -1 });
 		res.status(200).json(agents);
 	} catch (error) {
 		res.status(500).json({ error: error.message });

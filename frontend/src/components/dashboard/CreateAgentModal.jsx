@@ -5,7 +5,7 @@ const CreateAgentModal = ({
 	isModalOpen,
 	setIsModalOpen,
 	form,
-	handleFormSubmit,
+	onFinish,
 	availableTools,
 	editingAgent,
 }) => {
@@ -30,7 +30,7 @@ const CreateAgentModal = ({
 			<Form
 				form={form}
 				layout="vertical"
-				onFinish={handleFormSubmit}
+				onFinish={onFinish}
 				requiredMark={false}
 				className="mt-4 space-y-4 font-sans"
 				initialValues={{

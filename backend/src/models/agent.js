@@ -4,6 +4,12 @@ const agentSchema = new mongoose.Schema(
 	{
 		name: { type: String, required: true },
 		role: { type: String, required: true },
+		userId: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "User",
+			required: true,
+		},
+
 		systemPrompt: { type: String, required: true },
 		model: { type: String, default: "gpt-4-turbo" },
 		tools: [{ type: String }], // e.g., ['search', 'calculator']
