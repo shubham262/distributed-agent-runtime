@@ -1,7 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AntdProvider from "../layouts/AntdProvider";
-
+import Provider from "@/redux/Provider";
 const geistSans = Geist({
 	variable: "--font-geist-sans",
 	subsets: ["latin"],
@@ -24,7 +24,9 @@ export default function RootLayout({ children }) {
 			className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
 		>
 			<AntdProvider>
-				<body className="min-h-full flex flex-col">{children}</body>
+				<Provider>
+					<body className="min-h-full flex flex-col">{children}</body>
+				</Provider>
 			</AntdProvider>
 		</html>
 	);
