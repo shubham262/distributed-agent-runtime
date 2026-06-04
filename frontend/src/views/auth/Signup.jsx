@@ -46,7 +46,7 @@ const Signup = () => {
 
 			localStorage.setItem("user", JSON.stringify(user));
 			message.success("Account created successfully");
-			return router.push("/dashboard");
+			return router.push("/dashboard/overview");
 		} catch (error) {
 			console.log("error==>handlSubmit", error);
 			message.error("Something went wrong during signup");

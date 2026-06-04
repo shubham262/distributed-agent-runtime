@@ -2,36 +2,35 @@
 import SidebarContent from "@/components/dashboard/Sidebar";
 import { Drawer, Spin } from "antd";
 import Header from "@/components/dashboard/Header";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authClient } from "@/config/auth";
-// import { updateUserInfo } from "@/redux/authSlice";
-// import { useDispatch } from "react-redux";
-// import { serializeUser } from "@/helper";
+import { updateUserInfo } from "@/redux/authSlice";
+import { useDispatch } from "react-redux";
+import { serializeUser } from "@/helper";
 
 const DashboardLayout = ({ children }) => {
-	const pathname = usePathname();
-	// const dispatch = useDispatch();
+	const dispatch = useDispatch();
 	const router = useRouter();
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-	// const { data, isPending, refetch } = authClient.useSession();
+	const { data, isPending, refetch } = authClient.useSession();
 
-	// useEffect(() => {
-	// 	if (!isPending && !data) {
-	// 		return router.push("/signin");
-	// 	}
-	// 	if (data) {
-	// 		dispatch(updateUserInfo(serializeUser(data.user)));
-	// 	}
-	// }, [isPending, dispatch, data, router]);
+	useEffect(() => {
+		if (!isPending && !data) {
+			return router.push("/signin");
+		}
+		if (data) {
+			dispatch(updateUserInfo(serializeUser(data.user)));
+		}
+	}, [isPending, dispatch, data, router]);
 
-	// if (isPending) {
-	// 	return (
-	// 		<div className="flex h-screen bg-blue-50/30 overflow-hidden font-sans">
-	// 			<Spin />
-	// 		</div>
-	// 	);
-	// }
+	if (isPending) {
+		return (
+			<div className="flex h-screen bg-blue-50/30 overflow-hidden font-sans">
+				<Spin />
+			</div>
+		);
+	}
 
 	return (
 		<div className="flex h-screen bg-blue-50/30 overflow-hidden font-sans">

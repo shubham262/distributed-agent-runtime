@@ -7,7 +7,7 @@ import { Button, Input, message, Typography } from "antd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useCallback, useState } from "react";
-import { FiShield, FiMail, FiLock, FiArrowRight } from "react-icons/fi";
+import { FiMail, FiLock, FiArrowRight } from "react-icons/fi";
 
 const { Title, Paragraph } = Typography;
 
@@ -42,7 +42,7 @@ const Login = () => {
 			const { user } = data;
 			localStorage.setItem("user", JSON.stringify(user));
 
-			return router.push("/dashboard");
+			return router.push("/dashboard/overview");
 		} catch (error) {
 			console.log("error==>handlSubmit", error);
 			message.error("Invalid credentials or something went wrong");

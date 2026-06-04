@@ -109,7 +109,10 @@ const Header = ({ onOpenMobileMenu }) => {
 					menu={{ items: menuItems }}
 					trigger={["click"]}
 					placement="bottomRight"
-					overlayClassName="shadow-lg border border-slate-50 rounded-lg"
+					classNames={{
+						root: "shadow-lg border border-slate-50 rounded-lg",
+					}}
+					// overlayClassName="shadow-lg border border-slate-50 rounded-lg"
 				>
 					<div className="flex items-center space-x-2.5 cursor-pointer group py-1.5 pl-2 pr-1 rounded-lg hover:bg-slate-50 transition-colors">
 						{/* Avatar Node Wrapper */}
