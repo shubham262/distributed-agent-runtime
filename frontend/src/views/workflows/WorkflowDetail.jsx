@@ -30,6 +30,7 @@ import {
 	FiTrash2,
 } from "react-icons/fi";
 import { useParams, useRouter } from "next/navigation";
+import MarkdownContent from "@/components/common/MarkdownContent";
 import WorkflowBuilder from "@/views/workflows/WorkflowBuilder";
 import {
 	deleteWorkflow,
@@ -47,6 +48,22 @@ const statusColor = (status) => {
 	if (status === "FAILED") return "error";
 	if (status === "QUEUED" || status === "SCHEDULED") return "blue";
 	return "default";
+};
+
+const formatOutputPreview = (output) => {
+	if (!output) return "No output yet";
+	const text = typeof output === "string" ? output : String(output);
+	return text.replace(/\s+/g, " ").trim().slice(0, 120);
+};
+
+const formatOutputRaw = (output) => {
+	if (!output) return "";
+	if (typeof output === "string") return output;
+	try {
+		return JSON.stringify(output, null, 2);
+	} catch {
+		return String(output);
+	}
 };
 
 const formatDate = (value) => {
@@ -249,7 +266,7 @@ const WorkflowDetail = () => {
 				key: "output",
 				render: (output) => (
 					<span className="line-clamp-1 text-xs text-slate-500">
-						{output ? String(output) : "No output yet"}
+						{formatOutputPreview(output)}
 					</span>
 				),
 			},
@@ -476,15 +493,28 @@ const WorkflowDetail = () => {
 							</Card>
 						</div>
 
-						<Card title="Output" className="rounded-2xl">
-							<Typography.Paragraph
-								copyable
-								className="mb-0 whitespace-pre-wrap"
-							>
-								{selectedRun.output
-									? String(selectedRun.output)
-									: "No output yet."}
-							</Typography.Paragraph>
+						<Card
+							title="Output"
+							className="rounded-2xl"
+							extra={
+								selectedRun.output ? (
+									<Typography.Text
+										copyable={{ text: formatOutputRaw(selectedRun.output) }}
+										className="text-xs text-slate-500"
+									>
+										Copy raw
+									</Typography.Text>
+								) : null
+							}
+						>
+							{selectedRun.output ? (
+								<MarkdownContent
+									content={selectedRun.output}
+									className="max-h-[60vh] overflow-y-auto pr-1"
+								/>
+							) : (
+								<Empty description="No output yet." />
+							)}
 						</Card>
 
 						<Card title="Logs" className="rounded-2xl">
