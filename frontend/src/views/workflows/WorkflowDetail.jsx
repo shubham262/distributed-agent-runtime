@@ -10,6 +10,7 @@ import {
 	Drawer,
 	Empty,
 	Form,
+	Input,
 	DatePicker,
 	Modal,
 	Popconfirm,
@@ -66,6 +67,25 @@ const formatOutputRaw = (output) => {
 	}
 };
 
+const getMessageRole = (msg = {}) => {
+	if (typeof msg._getType === "function") return msg._getType();
+	if (msg.type) return msg.type;
+	if (Array.isArray(msg.id) && msg.id[2]) return msg.id[2];
+	return "message";
+};
+
+const getMessageContent = (msg = {}) => {
+	if (typeof msg.content === "string") return msg.content;
+	if (Array.isArray(msg.content)) {
+		return msg.content
+			.map((part) => (typeof part === "string" ? part : part?.text || ""))
+			.join(" ");
+	}
+	if (typeof msg.kwargs?.content === "string") return msg.kwargs.content;
+	if (msg.kwargs?.content) return JSON.stringify(msg.kwargs.content);
+	return "";
+};
+
 const formatDate = (value) => {
 	if (!value) return "Not set";
 	try {
@@ -85,6 +105,7 @@ const WorkflowDetail = () => {
 	const params = useParams();
 	const workflowId = params?.id;
 	const [scheduleForm] = Form.useForm();
+	const [promptForm] = Form.useForm();
 	const [workflow, setWorkflow] = useState(null);
 	const [runs, setRuns] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -92,6 +113,7 @@ const WorkflowDetail = () => {
 	const [savingSchedule, setSavingSchedule] = useState(false);
 	const [publishing, setPublishing] = useState(false);
 	const [scheduleOpen, setScheduleOpen] = useState(false);
+	const [promptOpen, setPromptOpen] = useState(false);
 	const [runDrawerOpen, setRunDrawerOpen] = useState(false);
 	const [selectedRun, setSelectedRun] = useState(null);
 	const [selectedRunLoading, setSelectedRunLoading] = useState(false);
@@ -165,15 +187,23 @@ const WorkflowDetail = () => {
 		await Promise.all([loadWorkflow(), loadRuns()]);
 	}, [loadRuns, loadWorkflow]);
 
-	const handlePublish = useCallback(async () => {
+	const handlePublish = useCallback(() => {
+		promptForm.resetFields();
+		setPromptOpen(true);
+	}, [promptForm]);
+
+	const handlePublishSubmit = useCallback(async () => {
 		try {
+			const values = await promptForm.validateFields();
 			setPublishing(true);
 			const response = await playWorkflow(workflowId, {
+				prompt: values.prompt?.trim() || "",
 				metadata: {
 					source: "publish",
 				},
 			});
 			message.success("Workflow published and execution started.");
+			setPromptOpen(false);
 			await refreshAll();
 			if (response?.runId) {
 				await openRun(response.runId);
@@ -184,7 +214,7 @@ const WorkflowDetail = () => {
 		} finally {
 			setPublishing(false);
 		}
-	}, [openRun, refreshAll, workflowId]);
+	}, [openRun, promptForm, refreshAll, workflowId]);
 
 	const handleDeleteWorkflow = useCallback(async () => {
 		try {
@@ -288,6 +318,7 @@ const WorkflowDetail = () => {
 	);
 
 	const selectedRunLogs = selectedRun?.logs || [];
+	const selectedRunMessages = selectedRun?.graphState?.messages || [];
 	const selectedWorkflow = workflow || {};
 
 	return (
@@ -410,6 +441,31 @@ const WorkflowDetail = () => {
 			</section>
 
 			<Modal
+				title="Run Workflow"
+				open={promptOpen}
+				onCancel={() => setPromptOpen(false)}
+				onOk={handlePublishSubmit}
+				okText="Run"
+				confirmLoading={publishing}
+				destroyOnHidden={false}
+			>
+				<Form form={promptForm} layout="vertical">
+					<Form.Item
+						name="prompt"
+						label="Task prompt"
+						rules={[
+							{ required: true, message: "Enter a task for the agents to execute." },
+						]}
+					>
+						<Input.TextArea
+							rows={4}
+							placeholder="e.g. Research the latest trends in AI orchestration and write a summary."
+						/>
+					</Form.Item>
+				</Form>
+			</Modal>
+
+			<Modal
 				title="Schedule Workflow"
 				open={scheduleOpen}
 				onCancel={() => setScheduleOpen(false)}
@@ -462,7 +518,7 @@ const WorkflowDetail = () => {
 							showIcon
 						/>
 
-						<div className="grid gap-3 md:grid-cols-3">
+						<div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
 							<Card size="small">
 								<div className="text-xs uppercase text-slate-400">Status</div>
 								<div className="mt-1">
@@ -483,6 +539,17 @@ const WorkflowDetail = () => {
 										(selectedRun.metrics?.executionTimeMs || 0) / 1000
 									)}
 									s
+								</div>
+							</Card>
+							<Card size="small">
+								<div className="text-xs uppercase text-slate-400">Tokens</div>
+								<div className="mt-1 text-sm font-medium text-slate-900">
+									{(selectedRun.metrics?.promptTokens || 0) +
+										(selectedRun.metrics?.completionTokens || 0)}
+								</div>
+								<div className="text-[11px] text-slate-500">
+									{selectedRun.metrics?.promptTokens || 0} in /{" "}
+									{selectedRun.metrics?.completionTokens || 0} out
 								</div>
 							</Card>
 							<Card size="small">
@@ -515,6 +582,31 @@ const WorkflowDetail = () => {
 							) : (
 								<Empty description="No output yet." />
 							)}
+						</Card>
+
+						<Card title="Inter-agent Messages" className="rounded-2xl">
+							<div className="space-y-3">
+								{selectedRunMessages.length === 0 ? (
+									<Empty description="No messages yet." />
+								) : (
+									selectedRunMessages.map((msg, index) => (
+										<div
+											key={`message-${index}`}
+											className="rounded-xl border border-slate-100 bg-slate-50 p-3"
+										>
+											<div className="mb-2 flex items-center gap-2">
+												<Tag className="border-none bg-white capitalize text-slate-600">
+													{getMessageRole(msg)}
+												</Tag>
+											</div>
+											<MarkdownContent
+												content={getMessageContent(msg)}
+												className="text-sm text-slate-700"
+											/>
+										</div>
+									))
+								)}
+							</div>
 						</Card>
 
 						<Card title="Logs" className="rounded-2xl">

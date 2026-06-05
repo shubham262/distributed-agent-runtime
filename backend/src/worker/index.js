@@ -9,7 +9,13 @@ const { WorkflowRun, Workflow } = db;
 const worker = new Worker(
 	"workflow-execution",
 	async (job) => {
-		const { workflowId, runId, metadata } = job.data;
+		const { workflowId, runId, metadata = {}, prompt = "" } = job.data;
+		const taskPrompt =
+			typeof prompt === "string" && prompt.trim()
+				? prompt.trim()
+				: typeof metadata?.prompt === "string"
+				? metadata.prompt.trim()
+				: "";
 
 		console.log(
 			`👷 [Job ID: ${job.id}] Processing Run [${runId}] for Workflow: ${workflowId}`
@@ -38,14 +44,28 @@ const worker = new Worker(
 		try {
 			const executableGraph = await compileWorkflow(workflowId);
 
-			const finalState = await executableGraph.invoke(
-				{
-					runId: runId,
-				},
-				{
-					configurable: { thread_id: runId },
-				}
-			);
+			const initialState = {
+				runId: runId,
+				...(taskPrompt
+					? {
+							messages: [new HumanMessage(taskPrompt)],
+					  }
+					: {}),
+			};
+
+			if (taskPrompt) {
+				await WorkflowRun.findByIdAndUpdate(runId, {
+					$push: {
+						logs: {
+							action: `Workflow task prompt received (${taskPrompt.length} chars).`,
+						},
+					},
+				});
+			}
+
+			const finalState = await executableGraph.invoke(initialState, {
+				configurable: { thread_id: runId },
+			});
 
 			const executionTimeMs = Date.now() - startTime;
 

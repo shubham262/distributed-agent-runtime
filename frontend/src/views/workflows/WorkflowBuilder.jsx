@@ -42,6 +42,11 @@ import {
 	editWorkflow,
 	getWorkflowById,
 } from "@/service/workflow";
+import { DEFAULT_RULE } from "@/lib/ruleSchema";
+import {
+	isValidWorkflowConnection,
+	validateWorkflowGraph,
+} from "@/lib/workflowGraphValidation";
 
 const WORKFLOW_START_NODE_ID = "workflow_start";
 const WORKFLOW_END_NODE_ID = "workflow_end";
@@ -213,8 +218,9 @@ const makeLoopNode = (index = 0) => ({
 		label: "Loop",
 		config: {
 			label: "Loop",
-			iterations: 3,
-			condition: "while pending",
+			maxIterations: 3,
+			breakRule: null,
+			breakOnMax: true,
 		},
 	},
 });
@@ -228,9 +234,10 @@ const makeConditionalNode = (index = 0) => ({
 		label: "Conditional",
 		config: {
 			label: "Conditional",
-			expression: "context.isReady === true",
+			rule: { ...DEFAULT_RULE },
 			trueLabel: "true",
 			falseLabel: "false",
+			onFalse: null,
 		},
 	},
 });
@@ -536,36 +543,7 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 	);
 
 	const isValidConnection = useCallback(
-		(connection) => {
-			if (!connection?.source || !connection?.target) {
-				return false;
-			}
-
-			if (connection.source === connection.target) {
-				return false;
-			}
-
-			const sourceNode = info.nodes.find(
-				(node) => node.id === connection.source
-			);
-			const targetNode = info.nodes.find(
-				(node) => node.id === connection.target
-			);
-
-			if (!sourceNode || !targetNode) {
-				return false;
-			}
-
-			if (sourceNode.type === "end") {
-				return false;
-			}
-
-			if (targetNode.type === "start") {
-				return false;
-			}
-
-			return true;
-		},
+		(connection) => isValidWorkflowConnection(connection, info.nodes),
 		[info.nodes]
 	);
 
@@ -660,6 +638,12 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 				}
 
 				if (selectedNode.type === "loop") {
+					const loopConfig = {
+						label: values.label,
+						maxIterations: values.maxIterations,
+						breakRule: values.enableBreakRule ? values.breakRule : null,
+						breakOnMax: true,
+					};
 					updateInfo((current) => ({
 						nodes: current.nodes.map((node) =>
 							node.id === selectedNode.id
@@ -667,11 +651,7 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 										...node,
 										data: {
 											...node.data,
-											config: {
-												label: values.label,
-												iterations: values.iterations,
-												condition: values.condition,
-											},
+											config: loopConfig,
 											label: values.label,
 										},
 								  }
@@ -681,11 +661,7 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 							...selectedNode,
 							data: {
 								...selectedNode.data,
-								config: {
-									label: values.label,
-									iterations: values.iterations,
-									condition: values.condition,
-								},
+								config: loopConfig,
 								label: values.label,
 							},
 						},
@@ -697,6 +673,13 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 				}
 
 				if (selectedNode.type === "conditional") {
+					const conditionalConfig = {
+						label: values.label,
+						rule: values.rule,
+						trueLabel: values.trueLabel,
+						falseLabel: values.falseLabel,
+						onFalse: values.onFalseEnd ? "end" : null,
+					};
 					updateInfo((current) => ({
 						nodes: current.nodes.map((node) =>
 							node.id === selectedNode.id
@@ -704,12 +687,7 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 										...node,
 										data: {
 											...node.data,
-											config: {
-												label: values.label,
-												expression: values.expression,
-												trueLabel: values.trueLabel,
-												falseLabel: values.falseLabel,
-											},
+											config: conditionalConfig,
 											label: values.label,
 										},
 								  }
@@ -719,12 +697,7 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 							...selectedNode,
 							data: {
 								...selectedNode.data,
-								config: {
-									label: values.label,
-									expression: values.expression,
-									trueLabel: values.trueLabel,
-									falseLabel: values.falseLabel,
-								},
+								config: conditionalConfig,
 								label: values.label,
 							},
 						},
@@ -747,6 +720,13 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 			const values = await workflowForm.validateFields();
 			const serializedNodes = info.nodes.map(sanitizeNode);
 			const serializedEdges = info.edges.map(sanitizeEdge);
+
+			try {
+				validateWorkflowGraph(serializedNodes, serializedEdges);
+			} catch (validationError) {
+				message.error(validationError.message);
+				return;
+			}
 			const uiGraph = {
 				nodes: serializedNodes,
 				edges: serializedEdges,

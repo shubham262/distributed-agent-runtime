@@ -86,7 +86,14 @@ const LoopNode = ({ data, selected }) => (
 	<div className="relative">
 		<Handle
 			type="target"
+			position={Position.Top}
+			id="entry"
+			className="!h-3 !w-3 !border-2 !border-emerald-500 !bg-white"
+		/>
+		<Handle
+			type="target"
 			position={Position.Left}
+			id="back"
 			className="!h-3 !w-3 !border-2 !border-emerald-500 !bg-white"
 		/>
 		<NodeFrame
@@ -94,24 +101,37 @@ const LoopNode = ({ data, selected }) => (
 			accentClass="bg-gradient-to-r from-emerald-500 to-lime-400"
 			icon={<FiLayers className="text-lg text-emerald-600" />}
 			title={data?.config?.label || data?.label || "Loop"}
-			subtitle={data?.config?.condition || "Repeat this branch"}
+			subtitle={
+				data?.config?.breakRule
+					? "Break when rule matches"
+					: `Up to ${data?.config?.maxIterations ?? data?.config?.iterations ?? 3} runs`
+			}
 		>
 			<div className="grid grid-cols-2 gap-2 text-[11px] text-slate-500">
 				<div className="rounded-lg bg-slate-50 px-2 py-1">
 					<p className="font-semibold text-slate-700">
-						{data?.config?.iterations ?? 0}
+						{data?.config?.maxIterations ?? data?.config?.iterations ?? 0}
 					</p>
-					<p>Iterations</p>
+					<p>Max runs</p>
 				</div>
 				<div className="rounded-lg bg-slate-50 px-2 py-1">
-					<p className="font-semibold text-slate-700">Cycle</p>
-					<p>Control</p>
+					<p className="font-semibold text-slate-700">
+						{data?.config?.breakRule ? "Rule" : "Fixed"}
+					</p>
+					<p>Break mode</p>
 				</div>
 			</div>
 		</NodeFrame>
 		<Handle
 			type="source"
 			position={Position.Right}
+			id="body"
+			className="!h-3 !w-3 !border-2 !border-emerald-500 !bg-white"
+		/>
+		<Handle
+			type="source"
+			position={Position.Bottom}
+			id="exit"
 			className="!h-3 !w-3 !border-2 !border-emerald-500 !bg-white"
 		/>
 	</div>

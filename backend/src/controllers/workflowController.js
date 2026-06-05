@@ -321,7 +321,7 @@ export const deleteWorkflow = async (req, res) => {
 export const executeWorkflow = async (req, res) => {
 	try {
 		const { id } = req.params;
-		const { metadata = {} } = req.body;
+		const { metadata = {}, prompt = "" } = req.body;
 		const userId = req.user?.id;
 
 		if (!userId) {
@@ -349,7 +349,7 @@ export const executeWorkflow = async (req, res) => {
 		});
 		await newRun.save();
 		const runId = newRun._id.toString();
-		await enqueueWorkflow(id, runId, metadata);
+		await enqueueWorkflow(id, runId, { ...metadata, prompt });
 		res.status(202).json({
 			success: true,
 			message: "Workflow job queued for background processing execution.",
@@ -364,7 +364,7 @@ export const executeWorkflow = async (req, res) => {
 export const scheduleWorkflow = async (req, res) => {
 	try {
 		const { id } = req.params;
-		const { runAt, timezone = "UTC", metadata = {} } = req.body || {};
+		const { runAt, timezone = "UTC", metadata = {}, prompt = "" } = req.body || {};
 		const userId = req.user?.id;
 
 		if (!userId) {
@@ -413,6 +413,7 @@ export const scheduleWorkflow = async (req, res) => {
 
 		await enqueueWorkflow(id, newRun._id.toString(), {
 			...metadata,
+			prompt,
 			delay,
 			jobId: newRun._id.toString(),
 			scheduledAt: parsedRunAt.toISOString(),

@@ -2,9 +2,25 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { Drawer, Empty, Form, Input, InputNumber, Button, Select } from "antd";
+import {
+	Drawer,
+	Empty,
+	Form,
+	Input,
+	InputNumber,
+	Button,
+	Select,
+	Switch,
+	message,
+} from "antd";
 import { FiSave, FiSettings } from "react-icons/fi";
 import { getAgentTools } from "@/service/agent";
+import RuleBuilder from "@/components/workflows/RuleBuilder";
+import { DEFAULT_RULE } from "@/lib/ruleSchema";
+import {
+	normalizeConditionalConfig,
+	normalizeLoopConfig,
+} from "@/lib/workflowGraphValidation";
 
 const CHANNEL_OPTIONS = [
 	{ value: "web", label: "Web" },
@@ -37,18 +53,22 @@ const getInitialValues = (selectedNode) => {
 		};
 	}
 	if (selectedNode.type === "loop") {
+		const config = normalizeLoopConfig(selectedNode.data?.config);
 		return {
-			label: selectedNode.data?.config?.label || "Loop",
-			iterations: selectedNode.data?.config?.iterations ?? 3,
-			condition: selectedNode.data?.config?.condition || "",
+			label: config.label,
+			maxIterations: config.maxIterations,
+			enableBreakRule: Boolean(config.breakRule),
+			breakRule: config.breakRule || { ...DEFAULT_RULE },
 		};
 	}
 	if (selectedNode.type === "conditional") {
+		const config = normalizeConditionalConfig(selectedNode.data?.config);
 		return {
-			label: selectedNode.data?.config?.label || "Conditional",
-			expression: selectedNode.data?.config?.expression || "",
-			trueLabel: selectedNode.data?.config?.trueLabel || "true",
-			falseLabel: selectedNode.data?.config?.falseLabel || "false",
+			label: config.label,
+			rule: config.rule || { ...DEFAULT_RULE },
+			trueLabel: config.trueLabel,
+			falseLabel: config.falseLabel,
+			onFalseEnd: config.onFalse === "end",
 		};
 	}
 	return { label: selectedNode.data?.label || selectedNode.type || "Node" };
@@ -65,6 +85,7 @@ const WorkflowNodeDrawer = ({
 	const [info, setInfo] = useState({
 		tools: [],
 	});
+	const enableBreakRule = Form.useWatch("enableBreakRule", form);
 
 	useEffect(() => {
 		fetchTools();
@@ -182,12 +203,31 @@ const WorkflowNodeDrawer = ({
 							>
 								<Input />
 							</Form.Item>
-							<Form.Item name="iterations" label="Iterations">
+							<Form.Item
+								name="maxIterations"
+								label="Max iterations"
+								rules={[{ required: true, message: "Max iterations is required" }]}
+							>
 								<InputNumber min={1} max={100} className="w-full" />
 							</Form.Item>
-							<Form.Item name="condition" label="Condition">
-								<Input.TextArea rows={4} />
+							<p className="text-xs text-slate-500">
+								Loop runs the body up to N times. Wire entry (top), body (right),
+								back (left), and exit (bottom) handles.
+							</p>
+							<Form.Item
+								name="enableBreakRule"
+								label="Break early when rule matches"
+								valuePropName="checked"
+							>
+								<Switch />
 							</Form.Item>
+							{enableBreakRule ? (
+								<RuleBuilder
+									namePrefix="breakRule"
+									label="Break rule"
+									required
+								/>
+							) : null}
 						</>
 					) : selectedNode.type === "conditional" ? (
 						<>
@@ -198,9 +238,11 @@ const WorkflowNodeDrawer = ({
 							>
 								<Input />
 							</Form.Item>
-							<Form.Item name="expression" label="Expression">
-								<Input.TextArea rows={4} />
-							</Form.Item>
+							<p className="text-xs text-slate-500">
+								Validator/router — evaluates the rule against the last agent output
+								and routes to the true or false branch.
+							</p>
+							<RuleBuilder namePrefix="rule" label="Routing rule" required />
 							<div className="grid grid-cols-2 gap-3">
 								<Form.Item name="trueLabel" label="True Branch">
 									<Input />
@@ -209,6 +251,13 @@ const WorkflowNodeDrawer = ({
 									<Input />
 								</Form.Item>
 							</div>
+							<Form.Item
+								name="onFalseEnd"
+								label="If false, go directly to End"
+								valuePropName="checked"
+							>
+								<Switch />
+							</Form.Item>
 						</>
 					) : (
 						<Form.Item name="label" label="Label">
@@ -216,17 +265,19 @@ const WorkflowNodeDrawer = ({
 						</Form.Item>
 					)}
 
-					<div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
-						<Button onClick={onClose}>Cancel</Button>
-						<Button
-							type="primary"
-							icon={<FiSave />}
-							loading={saving}
-							onClick={handleSubmit}
-						>
-							Save Node
-						</Button>
-					</div>
+					{selectedNode.type !== "start" && selectedNode.type !== "end" ? (
+						<div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+							<Button onClick={onClose}>Cancel</Button>
+							<Button
+								type="primary"
+								icon={<FiSave />}
+								loading={saving}
+								onClick={handleSubmit}
+							>
+								Save Node
+							</Button>
+						</div>
+					) : null}
 				</Form>
 			) : (
 				<Empty description="Select a node to edit it." />
