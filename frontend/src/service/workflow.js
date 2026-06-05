@@ -26,6 +26,15 @@ export const getWorkflowById = async (id) => {
 	}
 };
 
+export const getAllRuns = async () => {
+	try {
+		const { data } = await api.get(`/api/workflows/runs/list`);
+		return data;
+	} catch (error) {
+		throw error;
+	}
+};
+
 export const getWorkflowRuns = async (id) => {
 	try {
 		const { data } = await api.get(`/api/workflows/${id}/runs`);

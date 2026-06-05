@@ -120,6 +120,28 @@ export const getWorkflows = async (req, res) => {
 	}
 };
 
+export const getAllWorkflowRuns = async (req, res) => {
+	try {
+		const userId = req.user?.id;
+
+		if (!userId) {
+			return res.status(401).json({
+				error: "Authentication required to list workflow runs.",
+			});
+		}
+
+		const runs = await WorkflowRun.find({ userId })
+			.sort({ createdAt: -1 })
+			.limit(100)
+			.populate("workflowId", "name");
+
+		res.status(200).json(runs);
+	} catch (error) {
+		console.error("Error fetching all workflow runs:", error);
+		res.status(500).json({ error: error.message });
+	}
+};
+
 export const getWorkflowRuns = async (req, res) => {
 	try {
 		const { id } = req.params;

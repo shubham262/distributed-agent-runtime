@@ -3,6 +3,7 @@ import {
 	createWorkflow,
 	deleteWorkflow,
 	executeWorkflow,
+	getAllWorkflowRuns,
 	getWorkflowById,
 	getWorkflowRunById,
 	getWorkflowRuns,
@@ -18,8 +19,9 @@ router.use(checkUserAuth);
 
 router.post("/", createWorkflow);
 router.get("/", getWorkflows);
-router.get("/:id/runs", getWorkflowRuns);
+router.get("/runs/list", getAllWorkflowRuns);
 router.get("/runs/:runId", getWorkflowRunById);
+router.get("/:id/runs", getWorkflowRuns);
 router.get("/:id", getWorkflowById);
 router.put("/:id", updateWorkflow);
 router.delete("/:id", deleteWorkflow);
