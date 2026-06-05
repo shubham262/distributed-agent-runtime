@@ -3,6 +3,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
+import { formatTimestamp } from "@/lib/runUtils";
 import {
 	Alert,
 	Button,
@@ -86,19 +87,7 @@ const getMessageContent = (msg = {}) => {
 	return "";
 };
 
-const formatDate = (value) => {
-	if (!value) return "Not set";
-	try {
-		return new Intl.DateTimeFormat("en-US", {
-			month: "short",
-			day: "numeric",
-			hour: "numeric",
-			minute: "2-digit",
-		}).format(new Date(value));
-	} catch {
-		return "Not set";
-	}
-};
+const formatDate = (value) => formatTimestamp(value, "Not set");
 
 const WorkflowDetail = () => {
 	const router = useRouter();

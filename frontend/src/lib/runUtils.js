@@ -1,3 +1,5 @@
+import moment from "moment";
+
 export const statusColor = (status) => {
 	if (status === "RUNNING") return "processing";
 	if (status === "COMPLETED") return "success";
@@ -15,9 +17,9 @@ export const formatExecutionTime = (ms = 0) => {
 
 export const formatRelativeTime = (value) => {
 	if (!value) return "—";
-	const date = new Date(value);
-	const diffMs = Date.now() - date.getTime();
-	const diffMinutes = Math.floor(diffMs / 60000);
+	const date = moment(value);
+	if (!date.isValid()) return "—";
+	const diffMinutes = moment().diff(date, "minutes");
 
 	if (diffMinutes < 1) return "Just now";
 	if (diffMinutes < 60) return `${diffMinutes} min${diffMinutes === 1 ? "" : "s"} ago`;
@@ -25,12 +27,14 @@ export const formatRelativeTime = (value) => {
 	const diffHours = Math.floor(diffMinutes / 60);
 	if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
 
-	return new Intl.DateTimeFormat("en-US", {
-		month: "short",
-		day: "numeric",
-		hour: "numeric",
-		minute: "2-digit",
-	}).format(date);
+	return date.format("MMM D, h:mm A");
+};
+
+// Shared absolute-timestamp formatter (e.g. "Jun 5, 3:09 PM").
+export const formatTimestamp = (value, fallback = "—") => {
+	if (!value) return fallback;
+	const date = moment(value);
+	return date.isValid() ? date.format("MMM D, h:mm A") : fallback;
 };
 
 export const formatTokens = (count = 0) => {

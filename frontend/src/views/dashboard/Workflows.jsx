@@ -13,20 +13,9 @@ import {
 } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { getAllWorkflows, playWorkflow } from "@/service/workflow";
+import { formatTimestamp } from "@/lib/runUtils";
 
-const formatDate = (value) => {
-	if (!value) return "Recently";
-	try {
-		return new Intl.DateTimeFormat("en-US", {
-			month: "short",
-			day: "numeric",
-			hour: "numeric",
-			minute: "2-digit",
-		}).format(new Date(value));
-	} catch {
-		return "Recently";
-	}
-};
+const formatDate = (value) => formatTimestamp(value, "Recently");
 
 const WorkflowsDashboard = () => {
 	const router = useRouter();

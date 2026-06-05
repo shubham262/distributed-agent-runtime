@@ -6,25 +6,14 @@ import MarkdownContent from "@/components/common/MarkdownContent";
 import {
 	formatExecutionTime,
 	formatOutputRaw,
+	formatTimestamp,
 	getMessageContent,
 	getMessageRole,
 	getWorkflowName,
 	statusColor,
 } from "@/lib/runUtils";
 
-const formatDate = (value) => {
-	if (!value) return "Not set";
-	try {
-		return new Intl.DateTimeFormat("en-US", {
-			month: "short",
-			day: "numeric",
-			hour: "numeric",
-			minute: "2-digit",
-		}).format(new Date(value));
-	} catch {
-		return "Not set";
-	}
-};
+const formatDate = (value) => formatTimestamp(value, "Not set");
 
 const RunLogDrawer = ({ open, onClose, run, loading }) => {
 	const logs = run?.logs || [];
