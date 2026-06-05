@@ -279,16 +279,7 @@ const WorkflowDetail = () => {
 				key: "executionTimeMs",
 				render: (value) => `${Math.round((value || 0) / 1000)}s`,
 			},
-			{
-				title: "Result",
-				dataIndex: "output",
-				key: "output",
-				render: (output) => (
-					<span className="line-clamp-1 text-xs text-slate-500">
-						{formatOutputPreview(output)}
-					</span>
-				),
-			},
+
 			{
 				title: "Action",
 				key: "action",
@@ -443,7 +434,10 @@ const WorkflowDetail = () => {
 						name="prompt"
 						label="Task prompt"
 						rules={[
-							{ required: true, message: "Enter a task for the agents to execute." },
+							{
+								required: true,
+								message: "Enter a task for the agents to execute.",
+							},
 						]}
 					>
 						<Input.TextArea
