@@ -3,7 +3,7 @@ import db from "../models/index.js";
 
 import { registry, toolsNameMap } from "../helpers/tools.js";
 
-const { Agent, AgentRun } = db;
+const { Agent } = db;
 
 export const createAgent = async (req, res) => {
 	try {

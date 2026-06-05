@@ -31,6 +31,10 @@ import { FiCpu, FiGitBranch, FiLayers, FiPlus, FiSave } from "react-icons/fi";
 import { useParams, useRouter } from "next/navigation";
 import CreateAgentModal from "@/components/dashboard/CreateAgentModal";
 import WorkflowNodeDrawer from "@/components/workflows/WorkflowNodeDrawer";
+import {
+	WORKFLOW_EDGE_TYPE,
+	workflowEdgeTypes,
+} from "@/components/workflows/WorkflowEdges";
 import { workflowNodeTypes } from "@/components/workflows/WorkflowNodes";
 import { createAgent, editAgent, getAllAgent } from "@/service/agent";
 import {
@@ -83,7 +87,7 @@ const makeWorkflowEdge = (
 	target,
 	...(sourceHandle ? { sourceHandle } : {}),
 	...(targetHandle ? { targetHandle } : {}),
-	type: "smoothstep",
+	type: WORKFLOW_EDGE_TYPE,
 	selectable: true,
 	deletable: true,
 	markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
@@ -501,6 +505,9 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 				edges: addEdge(
 					{
 						...connection,
+						type: WORKFLOW_EDGE_TYPE,
+						selectable: true,
+						deletable: true,
 						markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
 						style: { strokeWidth: 2, stroke: "#2563eb" },
 					},
@@ -994,11 +1001,12 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 									updateInfo({ viewport });
 								}}
 								nodeTypes={workflowNodeTypes}
+								edgeTypes={workflowEdgeTypes}
 								minZoom={0.2}
 								maxZoom={1.5}
 								deleteKeyCode={["Backspace", "Delete"]}
 								defaultEdgeOptions={{
-									type: "smoothstep",
+									type: WORKFLOW_EDGE_TYPE,
 									selectable: true,
 									deletable: true,
 									markerEnd: { type: MarkerType.ArrowClosed },
