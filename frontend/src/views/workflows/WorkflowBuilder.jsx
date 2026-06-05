@@ -63,7 +63,6 @@ const initialInfo = {
 	selectedNode: null,
 	agentModalOpen: false,
 	creatingAgentPlacement: "canvas",
-	isInitialized: false,
 	workflow: {
 		name: "Untitled Workflow",
 		description: "",
@@ -314,8 +313,10 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 	const [workflowForm] = Form.useForm();
 	const [agentForm] = Form.useForm();
 	const viewportRef = useRef({ x: 0, y: 0, zoom: 1 });
+	const viewportFittedRef = useRef(false);
+	const ignorePaneClickRef = useRef(false);
 	const [info, setInfo] = useState(initialInfo);
-	const { setViewport, fitView } = useReactFlow();
+	const { fitView } = useReactFlow();
 
 	const workflowTitle =
 		Form.useWatch("name", workflowForm) || info.workflow.name;
@@ -404,10 +405,11 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 
 	const openNodeDrawer = useCallback(
 		(node) => {
-			updateInfo({
-				selectedNode: node,
+			updateInfo((current) => ({
+				selectedNode:
+					current.nodes.find((item) => item.id === node.id) || node,
 				drawerOpen: true,
-			});
+			}));
 		},
 		[updateInfo]
 	);
@@ -440,12 +442,12 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 			const graph = createDefaultGraph();
 
 			workflowForm.setFieldsValue(nextWorkflow);
+			viewportFittedRef.current = false;
 			updateInfo({
 				nodes: graph.nodes,
 				edges: graph.edges,
 				workflow: nextWorkflow,
 				viewport: graph.viewport,
-				isInitialized: false,
 				workflowLoading: false,
 			});
 			return;
@@ -462,20 +464,17 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 				const graph = normalizeGraph(workflow.uiGraph, workflow.agents || []);
 				const nextWorkflow = toWorkflowUpdate(workflow);
 
+				viewportFittedRef.current = false;
+				viewportRef.current = graph.viewport || { x: 0, y: 0, zoom: 1 };
 				updateInfo({
 					nodes: graph.nodes,
 					edges: graph.edges,
 					workflow: nextWorkflow,
 					viewport: graph.viewport || { x: 0, y: 0, zoom: 1 },
-					isInitialized: true,
 					workflowLoading: false,
 				});
 
 				workflowForm.setFieldsValue(nextWorkflow);
-				viewportRef.current = graph.viewport || { x: 0, y: 0, zoom: 1 };
-				requestAnimationFrame(() => {
-					setViewport(viewportRef.current, { duration: 0 });
-				});
 			} catch (error) {
 				console.error("Workflow load failed:", error);
 				message.error("Unable to load workflow data.");
@@ -488,16 +487,34 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 		return () => {
 			cancelled = true;
 		};
-	}, [setViewport, updateInfo, workflowForm, workflowId]);
+	}, [updateInfo, workflowForm, workflowId]);
 
 	useEffect(() => {
-		if (!info.isInitialized && info.nodes.length > 0) {
-			requestAnimationFrame(() => {
-				fitView({ duration: 0, padding: 0.2 });
-			});
-			updateInfo({ isInitialized: true });
+		viewportFittedRef.current = false;
+	}, [workflowId]);
+
+	useEffect(() => {
+		if (
+			info.workflowLoading ||
+			info.nodes.length === 0 ||
+			viewportFittedRef.current
+		) {
+			return;
 		}
-	}, [fitView, info.isInitialized, info.nodes.length, updateInfo]);
+
+		let innerFrame;
+		const outerFrame = requestAnimationFrame(() => {
+			innerFrame = requestAnimationFrame(() => {
+				fitView({ duration: 0, padding: 0.25, maxZoom: 1 });
+				viewportFittedRef.current = true;
+			});
+		});
+
+		return () => {
+			cancelAnimationFrame(outerFrame);
+			if (innerFrame) cancelAnimationFrame(innerFrame);
+		};
+	}, [fitView, info.nodes.length, info.workflowLoading]);
 
 	const handleConnect = useCallback(
 		(connection) => {
@@ -975,11 +992,18 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 							<ReactFlow
 								nodes={info.nodes}
 								edges={info.edges}
+								nodeDragHandle=".workflow-node-drag-handle"
 								onNodesChange={handleNodesChange}
 								onEdgesChange={handleEdgesChange}
 								onConnect={handleConnect}
 								isValidConnection={isValidConnection}
-								onNodeClick={(_, node) => {
+								onNodeClick={(event, node) => {
+									event.stopPropagation();
+									ignorePaneClickRef.current = true;
+									window.setTimeout(() => {
+										ignorePaneClickRef.current = false;
+									}, 0);
+
 									if (isAnchorNode(node)) {
 										updateInfo({
 											drawerOpen: false,
@@ -990,15 +1014,16 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 
 									openNodeDrawer(node);
 								}}
-								onPaneClick={() =>
+								onPaneClick={() => {
+									if (ignorePaneClickRef.current) return;
+
 									updateInfo({
 										selectedNode: null,
 										drawerOpen: false,
-									})
-								}
+									});
+								}}
 								onMove={(_, viewport) => {
 									viewportRef.current = viewport;
-									updateInfo({ viewport });
 								}}
 								nodeTypes={workflowNodeTypes}
 								edgeTypes={workflowEdgeTypes}
