@@ -29,7 +29,7 @@ import {
 	FiRefreshCw,
 	FiTrash2,
 } from "react-icons/fi";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import WorkflowBuilder from "@/views/workflows/WorkflowBuilder";
 import {
 	deleteWorkflow,
@@ -63,8 +63,10 @@ const formatDate = (value) => {
 	}
 };
 
-const WorkflowDetail = ({ workflowId }) => {
+const WorkflowDetail = () => {
 	const router = useRouter();
+	const params = useParams();
+	const workflowId = params?.id;
 	const [scheduleForm] = Form.useForm();
 	const [workflow, setWorkflow] = useState(null);
 	const [runs, setRuns] = useState([]);
@@ -103,21 +105,18 @@ const WorkflowDetail = ({ workflowId }) => {
 		}
 	}, [workflowId]);
 
-	const loadSelectedRun = useCallback(
-		async (runId) => {
-			try {
-				setSelectedRunLoading(true);
-				const data = await getWorkflowRunById(runId);
-				setSelectedRun(data);
-			} catch (error) {
-				console.error("Run detail load error:", error);
-				message.error("Unable to load run details.");
-			} finally {
-				setSelectedRunLoading(false);
-			}
-		},
-		[]
-	);
+	const loadSelectedRun = useCallback(async (runId) => {
+		try {
+			setSelectedRunLoading(true);
+			const data = await getWorkflowRunById(runId);
+			setSelectedRun(data);
+		} catch (error) {
+			console.error("Run detail load error:", error);
+			message.error("Unable to load run details.");
+		} finally {
+			setSelectedRunLoading(false);
+		}
+	}, []);
 
 	useEffect(() => {
 		loadWorkflow();
@@ -333,12 +332,20 @@ const WorkflowDetail = ({ workflowId }) => {
 
 			<div className="grid gap-4 md:grid-cols-3">
 				<Card className="rounded-3xl">
-					<Statistic title="Past Runs" value={runs.length} prefix={<FiGitBranch />} />
+					<Statistic
+						title="Past Runs"
+						value={runs.length}
+						prefix={<FiGitBranch />}
+					/>
 				</Card>
 				<Card className="rounded-3xl">
 					<Statistic
 						title="Scheduled For"
-						value={selectedWorkflow.schedule?.runAt ? formatDate(selectedWorkflow.schedule.runAt) : "Not scheduled"}
+						value={
+							selectedWorkflow.schedule?.runAt
+								? formatDate(selectedWorkflow.schedule.runAt)
+								: "Not scheduled"
+						}
 						prefix={<FiCalendar />}
 					/>
 				</Card>
@@ -356,12 +363,18 @@ const WorkflowDetail = ({ workflowId }) => {
 			<section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
 				<div className="mb-4 flex items-center justify-between gap-3">
 					<div>
-						<h2 className="text-lg font-semibold text-slate-900">Past Workflow Runs</h2>
+						<h2 className="text-lg font-semibold text-slate-900">
+							Past Workflow Runs
+						</h2>
 						<p className="text-sm text-slate-500">
 							Click a run to inspect its logs, output, and metrics.
 						</p>
 					</div>
-					<Button icon={<FiRefreshCw />} onClick={loadRuns} loading={runsLoading}>
+					<Button
+						icon={<FiRefreshCw />}
+						onClick={loadRuns}
+						loading={runsLoading}
+					>
 						Refresh Runs
 					</Button>
 				</div>
@@ -388,16 +401,24 @@ const WorkflowDetail = ({ workflowId }) => {
 				confirmLoading={savingSchedule}
 				destroyOnClose={false}
 			>
-				<Form form={scheduleForm} layout="vertical" initialValues={{ runAt: null }}>
+				<Form
+					form={scheduleForm}
+					layout="vertical"
+					initialValues={{ runAt: null }}
+				>
 					<Form.Item
 						name="runAt"
 						label="Run date and time"
-						rules={[{ required: true, message: "Choose a future date and time." }]}
+						rules={[
+							{ required: true, message: "Choose a future date and time." },
+						]}
 					>
 						<DatePicker
 							showTime
 							className="w-full"
-							disabledDate={(current) => current && current < dayjs().startOf("day")}
+							disabledDate={(current) =>
+								current && current < dayjs().startOf("day")
+							}
 						/>
 					</Form.Item>
 				</Form>
@@ -407,7 +428,7 @@ const WorkflowDetail = ({ workflowId }) => {
 				title="Run Logs"
 				open={runDrawerOpen}
 				onClose={() => setRunDrawerOpen(false)}
-				width={720}
+				size={720}
 			>
 				{selectedRunLoading && !selectedRun ? (
 					<div className="py-10 text-center">
@@ -418,7 +439,9 @@ const WorkflowDetail = ({ workflowId }) => {
 						<Alert
 							type={selectedRun.status === "FAILED" ? "error" : "info"}
 							message={`Run ${selectedRun._id}`}
-							description={selectedRun.errorReason || "Live execution details and logs."}
+							description={
+								selectedRun.errorReason || "Live execution details and logs."
+							}
 							showIcon
 						/>
 
@@ -426,15 +449,23 @@ const WorkflowDetail = ({ workflowId }) => {
 							<Card size="small">
 								<div className="text-xs uppercase text-slate-400">Status</div>
 								<div className="mt-1">
-									<Tag color={statusColor(selectedRun.status)} className="border-none">
+									<Tag
+										color={statusColor(selectedRun.status)}
+										className="border-none"
+									>
 										{selectedRun.status}
 									</Tag>
 								</div>
 							</Card>
 							<Card size="small">
-								<div className="text-xs uppercase text-slate-400">Execution Time</div>
+								<div className="text-xs uppercase text-slate-400">
+									Execution Time
+								</div>
 								<div className="mt-1 text-sm font-medium text-slate-900">
-									{Math.round((selectedRun.metrics?.executionTimeMs || 0) / 1000)}s
+									{Math.round(
+										(selectedRun.metrics?.executionTimeMs || 0) / 1000
+									)}
+									s
 								</div>
 							</Card>
 							<Card size="small">
@@ -446,8 +477,13 @@ const WorkflowDetail = ({ workflowId }) => {
 						</div>
 
 						<Card title="Output" className="rounded-2xl">
-							<Typography.Paragraph copyable className="mb-0 whitespace-pre-wrap">
-								{selectedRun.output ? String(selectedRun.output) : "No output yet."}
+							<Typography.Paragraph
+								copyable
+								className="mb-0 whitespace-pre-wrap"
+							>
+								{selectedRun.output
+									? String(selectedRun.output)
+									: "No output yet."}
 							</Typography.Paragraph>
 						</Card>
 

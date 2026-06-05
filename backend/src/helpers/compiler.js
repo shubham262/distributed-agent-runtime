@@ -38,6 +38,9 @@ const GraphState = Annotation.Root({
 	}),
 });
 
+const WORKFLOW_START_NODE_TYPE = "start";
+const WORKFLOW_END_NODE_TYPE = "end";
+
 const createPassThroughNode = (nodeConfig) => {
 	return async (state) => {
 		const { runId, stepCount = 0 } = state;
@@ -65,6 +68,60 @@ const createPassThroughNode = (nodeConfig) => {
 			stepCount: nextStep,
 		};
 	};
+};
+
+const sortNodesByPosition = (nodes = []) =>
+	[...nodes].sort((left, right) => {
+		const leftX = left?.position?.x ?? 0;
+		const rightX = right?.position?.x ?? 0;
+		if (leftX !== rightX) return leftX - rightX;
+		const leftY = left?.position?.y ?? 0;
+		const rightY = right?.position?.y ?? 0;
+		return leftY - rightY;
+	});
+
+const hasDirectedPath = (edges = [], entryId, exitId) => {
+	if (!entryId || !exitId) return false;
+	if (entryId === exitId) return true;
+
+	const adjacency = new Map();
+	edges.forEach((edge) => {
+		if (!adjacency.has(edge.source)) {
+			adjacency.set(edge.source, new Set());
+		}
+		adjacency.get(edge.source).add(edge.target);
+	});
+
+	const visited = new Set([entryId]);
+	const queue = [entryId];
+
+	while (queue.length > 0) {
+		const current = queue.shift();
+		if (current === exitId) return true;
+
+		const neighbors = adjacency.get(current);
+		if (!neighbors) continue;
+
+		neighbors.forEach((nextNode) => {
+			if (!visited.has(nextNode)) {
+				visited.add(nextNode);
+				queue.push(nextNode);
+			}
+		});
+	}
+
+	return false;
+};
+
+const buildFallbackLinearEdges = (nodes = []) => {
+	const orderedNodes = nodes.some((node) => node?.position)
+		? sortNodesByPosition(nodes)
+		: [...nodes];
+
+	return orderedNodes.slice(0, -1).map((node, index) => ({
+		source: node.id,
+		target: orderedNodes[index + 1].id,
+	}));
 };
 
 const createAgentNode = (agentConfig, nodeConfig) => {
@@ -181,12 +238,22 @@ export const compileWorkflow = async (workflowId) => {
 	const graphBuilder = new StateGraph(GraphState);
 	const nodeEntries = Array.isArray(uiGraph?.nodes) ? uiGraph.nodes : [];
 	const edgeEntries = Array.isArray(uiGraph?.edges) ? uiGraph.edges : [];
+	const explicitStartNode = nodeEntries.find(
+		(node) => node?.type === WORKFLOW_START_NODE_TYPE
+	);
+	const explicitEndNode = nodeEntries.find(
+		(node) => node?.type === WORKFLOW_END_NODE_TYPE
+	);
 	const fallbackNodes =
 		nodeEntries.length > 0
 			? nodeEntries
-			: workflowDoc.agents.map((agent) => ({
+			: workflowDoc.agents.map((agent, index) => ({
 					id: agent._id.toString(),
 					type: "agent",
+					position: {
+						x: 120 + index * 180,
+						y: 220,
+					},
 					data: {
 						agentId: agent._id.toString(),
 						agent: agent.toObject(),
@@ -218,30 +285,57 @@ export const compileWorkflow = async (workflowId) => {
 		graphBuilder.addNode(node.id, createPassThroughNode(node));
 	});
 
-	if (edgeEntries.length === 0) {
+	if (
+		explicitStartNode &&
+		explicitEndNode &&
+		(edgeEntries.some((edge) => edge.target === explicitStartNode.id) ||
+			edgeEntries.some((edge) => edge.source === explicitEndNode.id))
+	) {
+		throw new Error(
+			"Compilation Error: Start and End anchors may only act as workflow boundaries."
+		);
+	}
+
+	const compiledEdges =
+		edgeEntries.length > 0
+			? edgeEntries.map((edge) => ({ source: edge.source, target: edge.target }))
+			: buildFallbackLinearEdges(fallbackNodes);
+
+	const sourceNodes = new Set(compiledEdges.map((edge) => edge.source));
+	const targetNodes = new Set(compiledEdges.map((edge) => edge.target));
+
+	const fallbackEntryId =
+		compiledEdges.find((edge) => !targetNodes.has(edge.source))?.source ||
+		compiledEdges[0]?.source ||
+		fallbackNodes[0]?.id;
+
+	const fallbackExitId =
+		compiledEdges.find((edge) => !sourceNodes.has(edge.target))?.target ||
+		compiledEdges[compiledEdges.length - 1]?.target ||
+		fallbackNodes[fallbackNodes.length - 1]?.id;
+
+	const entryNodeId = explicitStartNode?.id || fallbackEntryId;
+	const exitNodeId = explicitEndNode?.id || fallbackExitId;
+
+	if (!entryNodeId || !exitNodeId) {
 		throw new Error(
 			"Compilation Error: Visual graph lacks topology paths or edge vectors."
 		);
 	}
 
-	const sourceNodes = new Set(edgeEntries.map((e) => e.source));
-	const targetNodes = new Set(edgeEntries.map((e) => e.target));
+	if (!hasDirectedPath(compiledEdges, entryNodeId, exitNodeId)) {
+		throw new Error(
+			"Compilation Error: Workflow must have a valid path from Start to End."
+		);
+	}
 
-	const inferredEntryId =
-		edgeEntries.find((e) => !targetNodes.has(e.source))?.source ||
-		edgeEntries[0].source;
+	graphBuilder.addEdge(START, entryNodeId);
 
-	const inferredExitId =
-		edgeEntries.find((e) => !sourceNodes.has(e.target))?.target ||
-		edgeEntries[edgeEntries.length - 1].target;
-
-	graphBuilder.addEdge(START, inferredEntryId);
-
-	edgeEntries.forEach((edge) => {
+	compiledEdges.forEach((edge) => {
 		graphBuilder.addEdge(edge.source, edge.target);
 	});
 
-	graphBuilder.addEdge(inferredExitId, END);
+	graphBuilder.addEdge(exitNodeId, END);
 
 	const runtimeCheckpointer = new MemorySaver();
 

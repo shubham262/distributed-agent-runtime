@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function Page({ params }) {
-	return <WorkflowDetail workflowId={params.id} />;
+	return <WorkflowDetail />;
 }

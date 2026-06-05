@@ -24,6 +24,12 @@ const MODEL_OPTIONS = [
 
 const getInitialValues = (selectedNode) => {
 	if (!selectedNode) return {};
+	if (selectedNode.type === "start" || selectedNode.type === "end") {
+		return {
+			label: selectedNode.data?.label || selectedNode.type,
+			description: selectedNode.data?.description || "",
+		};
+	}
 	if (selectedNode.type === "agent") {
 		const agent = selectedNode.data?.agent || {};
 		return {
@@ -71,7 +77,11 @@ const WorkflowNodeDrawer = ({
 	}, [form, open, selectedNode]);
 
 	const title =
-		selectedNode?.type === "agent"
+		selectedNode?.type === "start"
+			? "Start Node"
+			: selectedNode?.type === "end"
+			? "End Node"
+			: selectedNode?.type === "agent"
 			? "Agent Details"
 			: selectedNode?.type === "loop"
 			? "Loop Settings"
@@ -92,14 +102,34 @@ const WorkflowNodeDrawer = ({
 					<span>{title}</span>
 				</div>
 			}
-			width={460}
+			size={460}
 			open={open}
 			onClose={onClose}
-			destroyOnClose={false}
+			destroyOnHidden={false}
 		>
 			{selectedNode ? (
-				<Form form={form} layout="vertical" requiredMark={false} className="space-y-4">
-					{selectedNode.type === "agent" ? (
+				<Form
+					form={form}
+					layout="vertical"
+					requiredMark={false}
+					className="space-y-4"
+				>
+					{selectedNode.type === "start" || selectedNode.type === "end" ? (
+						<div className="space-y-4">
+							<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+								<p className="text-sm font-semibold text-slate-900">
+									{selectedNode.data?.label || selectedNode.type}
+								</p>
+								<p className="mt-1 text-xs text-slate-500">
+									{selectedNode.data?.description ||
+										"Workflow boundary anchor nodes are not editable."}
+								</p>
+							</div>
+							<div className="flex items-center justify-end border-t border-slate-100 pt-4">
+								<Button onClick={onClose}>Close</Button>
+							</div>
+						</div>
+					) : selectedNode.type === "agent" ? (
 						<>
 							<Form.Item
 								name="name"
@@ -177,7 +207,12 @@ const WorkflowNodeDrawer = ({
 
 					<div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
 						<Button onClick={onClose}>Cancel</Button>
-						<Button type="primary" icon={<FiSave />} loading={saving} onClick={handleSubmit}>
+						<Button
+							type="primary"
+							icon={<FiSave />}
+							loading={saving}
+							onClick={handleSubmit}
+						>
 							Save Node
 						</Button>
 					</div>
@@ -190,4 +225,3 @@ const WorkflowNodeDrawer = ({
 };
 
 export default WorkflowNodeDrawer;
-

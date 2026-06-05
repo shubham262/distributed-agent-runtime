@@ -3,7 +3,13 @@
 import React from "react";
 import { Handle, Position } from "@xyflow/react";
 import { Tag } from "antd";
-import { FiActivity, FiCpu, FiLayers } from "react-icons/fi";
+import {
+	FiActivity,
+	FiCheckCircle,
+	FiCpu,
+	FiLayers,
+	FiPlay,
+} from "react-icons/fi";
 
 const NodeFrame = ({
 	accentClass,
@@ -148,9 +154,60 @@ const ConditionalNode = ({ data, selected }) => (
 	</div>
 );
 
+const StartNode = ({ data, selected }) => (
+	<div className="relative">
+		<NodeFrame
+			selected={selected}
+			accentClass="bg-gradient-to-r from-emerald-500 to-teal-400"
+			icon={<FiPlay className="text-lg text-emerald-600" />}
+			title={data?.label || "Start"}
+			subtitle={data?.description || "Workflow entry point"}
+		>
+			<div className="flex flex-wrap gap-2">
+				<Tag className="m-0 border-none bg-emerald-50 text-emerald-700">
+					Anchor
+				</Tag>
+				<Tag className="m-0 border-none bg-slate-100 text-slate-600">
+					Start
+				</Tag>
+			</div>
+		</NodeFrame>
+		<Handle
+			type="source"
+			position={Position.Bottom}
+			className="!h-3 !w-3 !border-2 !border-emerald-500 !bg-white"
+		/>
+	</div>
+);
+
+const EndNode = ({ data, selected }) => (
+	<div className="relative">
+		<Handle
+			type="target"
+			position={Position.Top}
+			className="!h-3 !w-3 !border-2 !border-rose-500 !bg-white"
+		/>
+		<NodeFrame
+			selected={selected}
+			accentClass="bg-gradient-to-r from-rose-500 to-pink-400"
+			icon={<FiCheckCircle className="text-lg text-rose-600" />}
+			title={data?.label || "End"}
+			subtitle={data?.description || "Workflow exit point"}
+		>
+			<div className="flex flex-wrap gap-2">
+				<Tag className="m-0 border-none bg-rose-50 text-rose-700">Anchor</Tag>
+				<Tag className="m-0 border-none bg-slate-100 text-slate-600">
+					End
+				</Tag>
+			</div>
+		</NodeFrame>
+	</div>
+);
+
 export const workflowNodeTypes = {
+	start: StartNode,
+	end: EndNode,
 	agent: AgentNode,
 	loop: LoopNode,
 	conditional: ConditionalNode,
 };
-

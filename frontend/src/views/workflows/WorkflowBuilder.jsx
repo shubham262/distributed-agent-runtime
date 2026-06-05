@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
 	Background,
 	Controls,
@@ -45,6 +45,10 @@ import {
 	getWorkflowById,
 } from "@/service/workflow";
 
+const WORKFLOW_START_NODE_ID = "workflow_start";
+const WORKFLOW_END_NODE_ID = "workflow_end";
+const WORKFLOW_SCHEMA_VERSION = 2;
+
 const TOOL_OPTIONS = [
 	{ value: "web-search", label: "Web Search" },
 	{ value: "extract-html", label: "HTML Extractor" },
@@ -79,6 +83,112 @@ const initialInfo = {
 
 const getId = (prefix) =>
 	`${prefix}_${crypto?.randomUUID?.() || Math.random().toString(36).slice(2)}`;
+
+const makeWorkflowEdge = (
+	source,
+	target,
+	{ sourceHandle, targetHandle } = {}
+) => ({
+	id: `${source}__${target}${sourceHandle ? `__${sourceHandle}` : ""}${
+		targetHandle ? `__${targetHandle}` : ""
+	}`,
+	source,
+	target,
+	...(sourceHandle ? { sourceHandle } : {}),
+	...(targetHandle ? { targetHandle } : {}),
+	type: "smoothstep",
+	selectable: true,
+	deletable: true,
+	markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+	style: { strokeWidth: 2, stroke: "#2563eb" },
+});
+
+const isAnchorNode = (node) => node?.type === "start" || node?.type === "end";
+
+const makeStartNode = (position = { x: 80, y: 220 }) => ({
+	id: WORKFLOW_START_NODE_ID,
+	type: "start",
+	position,
+	draggable: true,
+	deletable: false,
+	data: {
+		kind: "anchor",
+		label: "Start",
+		description: "Workflow entry point",
+	},
+});
+
+const makeEndNode = (position = { x: 560, y: 220 }) => ({
+	id: WORKFLOW_END_NODE_ID,
+	type: "end",
+	position,
+	draggable: true,
+	deletable: false,
+	data: {
+		kind: "anchor",
+		label: "End",
+		description: "Workflow exit point",
+	},
+});
+
+const getBounds = (nodes = []) => {
+	const positionedNodes = nodes.filter((node) => node?.position);
+	if (positionedNodes.length === 0) {
+		return { minX: 80, maxX: 560, centerY: 220 };
+	}
+
+	const xValues = positionedNodes.map((node) => node.position?.x ?? 0);
+	const yValues = positionedNodes.map((node) => node.position?.y ?? 0);
+
+	return {
+		minX: Math.min(...xValues),
+		maxX: Math.max(...xValues),
+		centerY:
+			yValues.reduce((sum, value) => sum + value, 0) / Math.max(yValues.length, 1),
+	};
+};
+
+const sortNodesByPosition = (nodes = []) =>
+	[...nodes].sort((left, right) => {
+		const leftX = left.position?.x ?? 0;
+		const rightX = right.position?.x ?? 0;
+		if (leftX !== rightX) return leftX - rightX;
+		const leftY = left.position?.y ?? 0;
+		const rightY = right.position?.y ?? 0;
+		return leftY - rightY;
+	});
+
+const inferBoundaryNodeIds = (edges = []) => {
+	const sourceNodes = new Set(edges.map((edge) => edge.source));
+	const targetNodes = new Set(edges.map((edge) => edge.target));
+
+	return {
+		entryId:
+			edges.find((edge) => !targetNodes.has(edge.source))?.source ||
+			edges[0]?.source,
+		exitId:
+			edges.find((edge) => !sourceNodes.has(edge.target))?.target ||
+			edges[edges.length - 1]?.target,
+	};
+};
+
+const chainEdges = (nodes = []) =>
+	nodes
+		.slice(0, -1)
+		.map((node, index) =>
+			makeWorkflowEdge(node.id, nodes[index + 1].id, { sourceHandle: undefined })
+		);
+
+const createDefaultGraph = () => {
+	const startNode = makeStartNode();
+	const endNode = makeEndNode();
+
+	return {
+		nodes: [startNode, endNode],
+		edges: [makeWorkflowEdge(startNode.id, endNode.id)],
+		viewport: { x: 0, y: 0, zoom: 1 },
+	};
+};
 
 const sanitizeNode = (node) => {
 	const { selected, dragging, width, height, measured, zIndex, ...rest } = node;
@@ -134,21 +244,65 @@ const makeConditionalNode = (index = 0) => ({
 });
 
 const normalizeGraph = (uiGraph = {}, agents = []) => {
-	const nodes = Array.isArray(uiGraph.nodes) ? uiGraph.nodes : [];
-	const edges = Array.isArray(uiGraph.edges) ? uiGraph.edges : [];
+	const viewport = uiGraph.viewport || { x: 0, y: 0, zoom: 1 };
+	const nodes = Array.isArray(uiGraph.nodes) ? [...uiGraph.nodes] : [];
+	const edges = Array.isArray(uiGraph.edges) ? [...uiGraph.edges] : [];
 
-	if (nodes.length > 0) {
+	if (nodes.length === 0) {
+		if (agents.length === 0) {
+			return createDefaultGraph();
+		}
+
+		const agentNodes = agents.map((agent, index) => makeAgentNode(agent, index));
+		const { minX, maxX, centerY } = getBounds(agentNodes);
+		const nextNodes = [
+			makeStartNode({ x: minX - 220, y: centerY }),
+			...agentNodes,
+			makeEndNode({ x: maxX + 220, y: centerY }),
+		];
+
 		return {
-			nodes,
-			edges,
-			viewport: uiGraph.viewport || { x: 0, y: 0, zoom: 1 },
+			nodes: nextNodes,
+			edges: chainEdges(sortNodesByPosition(nextNodes)),
+			viewport,
 		};
 	}
 
+	const hasStart = nodes.some((node) => node.id === WORKFLOW_START_NODE_ID);
+	const hasEnd = nodes.some((node) => node.id === WORKFLOW_END_NODE_ID);
+	const contentNodes = nodes.filter((node) => !isAnchorNode(node));
+	const bounds = getBounds(contentNodes.length > 0 ? contentNodes : nodes);
+
+	if (!hasStart) {
+		nodes.unshift(makeStartNode({ x: bounds.minX - 220, y: bounds.centerY }));
+	}
+
+	if (!hasEnd) {
+		nodes.push(makeEndNode({ x: bounds.maxX + 220, y: bounds.centerY }));
+	}
+
+	if (edges.length === 0) {
+		return {
+			nodes,
+			edges: chainEdges(sortNodesByPosition(nodes)),
+			viewport,
+		};
+	}
+
+	if (!hasStart || !hasEnd) {
+		const { entryId, exitId } = inferBoundaryNodeIds(edges);
+		if (!hasStart && entryId) {
+			edges.unshift(makeWorkflowEdge(WORKFLOW_START_NODE_ID, entryId));
+		}
+		if (!hasEnd && exitId) {
+			edges.push(makeWorkflowEdge(exitId, WORKFLOW_END_NODE_ID));
+		}
+	}
+
 	return {
-		nodes: agents.map((agent, index) => makeAgentNode(agent, index)),
+		nodes,
 		edges,
-		viewport: uiGraph.viewport || { x: 0, y: 0, zoom: 1 },
+		viewport,
 	};
 };
 
@@ -177,9 +331,17 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 		});
 	}, []);
 
-	const existingAgentMap = useMemo(() => {
-		return new Map(info.agents.map((agent) => [String(agent._id), agent]));
-	}, [info.agents]);
+	const isPristineAnchorGraph = useCallback((nodes, edges) => {
+		return (
+			Array.isArray(nodes) &&
+			Array.isArray(edges) &&
+			nodes.some((node) => node.id === WORKFLOW_START_NODE_ID) &&
+			nodes.some((node) => node.id === WORKFLOW_END_NODE_ID) &&
+			edges.length === 1 &&
+			edges[0]?.source === WORKFLOW_START_NODE_ID &&
+			edges[0]?.target === WORKFLOW_END_NODE_ID
+		);
+	}, []);
 
 	const openCreateAgentModal = useCallback(() => {
 		agentForm.resetFields();
@@ -221,11 +383,27 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 
 	const addNodeToCanvas = useCallback(
 		(nodeFactory) => {
-			updateInfo((current) => ({
-				nodes: [...current.nodes, nodeFactory(current.nodes.length)],
-			}));
+			updateInfo((current) => {
+				const contentNodeCount = current.nodes.filter(
+					(node) => !isAnchorNode(node)
+				).length;
+				const newNode = nodeFactory(contentNodeCount);
+				const nextNodes = [...current.nodes, newNode];
+
+				if (isPristineAnchorGraph(current.nodes, current.edges)) {
+					return {
+						nodes: nextNodes,
+						edges: [
+							makeWorkflowEdge(WORKFLOW_START_NODE_ID, newNode.id),
+							makeWorkflowEdge(newNode.id, WORKFLOW_END_NODE_ID),
+						],
+					};
+				}
+
+				return { nodes: nextNodes };
+			});
 		},
-		[updateInfo]
+		[isPristineAnchorGraph, updateInfo]
 	);
 
 	const openNodeDrawer = useCallback(
@@ -261,15 +439,21 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 	}, [updateInfo]);
 
 	useEffect(() => {
-	if (!workflowId) {
-		const nextWorkflow = toWorkflowUpdate();
-		workflowForm.setFieldsValue(nextWorkflow);
-		updateInfo({
-			workflow: nextWorkflow,
-			workflowLoading: false,
-		});
-		return;
-	}
+		if (!workflowId) {
+			const nextWorkflow = toWorkflowUpdate();
+			const graph = createDefaultGraph();
+
+			workflowForm.setFieldsValue(nextWorkflow);
+			updateInfo({
+				nodes: graph.nodes,
+				edges: graph.edges,
+				workflow: nextWorkflow,
+				viewport: graph.viewport,
+				isInitialized: false,
+				workflowLoading: false,
+			});
+			return;
+		}
 
 		let cancelled = false;
 
@@ -333,6 +517,36 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 			}));
 		},
 		[updateInfo]
+	);
+
+	const isValidConnection = useCallback(
+		(connection) => {
+			if (!connection?.source || !connection?.target) {
+				return false;
+			}
+
+			if (connection.source === connection.target) {
+				return false;
+			}
+
+			const sourceNode = info.nodes.find((node) => node.id === connection.source);
+			const targetNode = info.nodes.find((node) => node.id === connection.target);
+
+			if (!sourceNode || !targetNode) {
+				return false;
+			}
+
+			if (sourceNode.type === "end") {
+				return false;
+			}
+
+			if (targetNode.type === "start") {
+				return false;
+			}
+
+			return true;
+		},
+		[info.nodes]
 	);
 
 	const handleCreateAgent = useCallback(
@@ -515,7 +729,7 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 				nodes: serializedNodes,
 				edges: serializedEdges,
 				viewport: viewportRef.current,
-				schemaVersion: 1,
+				schemaVersion: WORKFLOW_SCHEMA_VERSION,
 			};
 			const agentIds = [
 				...new Set(
@@ -739,9 +953,21 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 								onNodesChange={handleNodesChange}
 								onEdgesChange={handleEdgesChange}
 								onConnect={handleConnect}
-								onNodeClick={(_, node) => openNodeDrawer(node)}
+								isValidConnection={isValidConnection}
+								onNodeClick={(_, node) => {
+									if (isAnchorNode(node)) {
+										updateInfo({
+											drawerOpen: false,
+											selectedNode: null,
+										});
+										return;
+									}
+
+									openNodeDrawer(node);
+								}}
 								onPaneClick={() =>
 									updateInfo({
+										selectedNode: null,
 										drawerOpen: false,
 									})
 								}
@@ -752,8 +978,11 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 								nodeTypes={workflowNodeTypes}
 								minZoom={0.2}
 								maxZoom={1.5}
+								deleteKeyCode={["Backspace", "Delete"]}
 								defaultEdgeOptions={{
 									type: "smoothstep",
+									selectable: true,
+									deletable: true,
 									markerEnd: { type: MarkerType.ArrowClosed },
 									style: { strokeWidth: 2, stroke: "#2563eb" },
 								}}
@@ -765,6 +994,8 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 									pannable
 									className="!rounded-2xl !border !border-slate-200 !bg-white/90"
 									nodeStrokeColor={(node) => {
+										if (node.type === "start") return "#10b981";
+										if (node.type === "end") return "#f43f5e";
 										if (node.type === "agent") return "#2563eb";
 										if (node.type === "loop") return "#10b981";
 										if (node.type === "conditional") return "#f59e0b";
@@ -781,8 +1012,8 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 											</span>
 										</div>
 										<p className="mt-1 text-slate-300">
-											Use explicit agent, loop, and conditional nodes to express
-											control flow.
+											Start and End nodes mark the workflow boundaries. Add
+											agents, loops, and conditionals in between.
 										</p>
 									</div>
 								</Panel>
