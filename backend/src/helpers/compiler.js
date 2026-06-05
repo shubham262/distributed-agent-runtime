@@ -6,10 +6,7 @@ import {
 	MemorySaver,
 } from "@langchain/langgraph";
 import { AzureChatOpenAI } from "@langchain/openai";
-import {
-	SystemMessage,
-	ToolMessage,
-} from "@langchain/core/messages";
+import { SystemMessage, ToolMessage } from "@langchain/core/messages";
 import db from "../models/index.js";
 import { getToolByName } from "./tools.js";
 import { evaluateRule } from "./ruleEvaluator.js";
@@ -35,6 +32,10 @@ const GraphState = Annotation.Root({
 			return [...normalize(left), ...normalize(right)];
 		},
 		default: () => [],
+	}),
+	user: Annotation({
+		reducer: (left, right) => right,
+		default: () => null,
 	}),
 	currentTurn: Annotation({
 		reducer: (left, right) => right,
@@ -165,7 +166,8 @@ const createLoopNode = (nodeConfig, bodyNodeFns, exitTargetId) => {
 			});
 
 			if (shouldBreak) break;
-			if (config.breakOnMax !== false && iteration >= config.maxIterations) break;
+			if (config.breakOnMax !== false && iteration >= config.maxIterations)
+				break;
 		}
 
 		currentState = {
@@ -221,9 +223,19 @@ const createAgentNode = (agentConfig, nodeConfig) => {
 		const toolMap = Object.fromEntries(
 			dynamicTools.map((toolDef) => [toolDef.name, toolDef])
 		);
+		const operatorName = state.user?.name || "System Operator";
+		const operatorEmail = state.user?.email || "not-provided";
 
 		const systemPromptMessage = new SystemMessage(
-			`You are playing the role of ${agentConfig.name} (${agentConfig.role}).\nInstructions:\n${agentConfig.systemPrompt}`
+			`You are playing the role of ${agentConfig.name} (${agentConfig.role}).
+     
+			CURRENT ACTIVE OPERATOR CONTEXT:
+			- Name: ${operatorName}
+			- Email Gateway Target: ${operatorEmail}
+			
+			When sending notification emails or reports, personalize them for ${operatorName} and route them to ${operatorEmail}.
+
+			Instructions:\n${agentConfig.systemPrompt}`
 		);
 		let conversation = [systemPromptMessage, ...state.messages];
 
@@ -359,7 +371,10 @@ export const compileWorkflow = async (workflowId) => {
 	const nodeFunctions = new Map();
 
 	nodes.forEach((node) => {
-		if (node.type === WORKFLOW_START_NODE_TYPE || node.type === WORKFLOW_END_NODE_TYPE) {
+		if (
+			node.type === WORKFLOW_START_NODE_TYPE ||
+			node.type === WORKFLOW_END_NODE_TYPE
+		) {
 			nodeFunctions.set(node.id, createPassThroughNode(node));
 			return;
 		}
@@ -437,9 +452,7 @@ export const compileWorkflow = async (workflowId) => {
 		const routeMap = {
 			true: trueEdge?.target,
 			false:
-				config.onFalse === "end"
-					? WORKFLOW_END_NODE_ID
-					: falseEdge?.target,
+				config.onFalse === "end" ? WORKFLOW_END_NODE_ID : falseEdge?.target,
 		};
 
 		if (!routeMap.true) {
@@ -457,8 +470,7 @@ export const compileWorkflow = async (workflowId) => {
 			condNode.id,
 			(state) => {
 				const result =
-					state.lastConditionalResult ??
-					evaluateRule(config.rule, state);
+					state.lastConditionalResult ?? evaluateRule(config.rule, state);
 				return result ? "true" : "false";
 			},
 			routeMap
@@ -472,10 +484,11 @@ export const compileWorkflow = async (workflowId) => {
 	const staticEdges = [
 		...compilationEdges,
 		...loopExitEdges.filter(
-			(edge) => !compilationEdges.some(
-				(existing) =>
-					existing.source === edge.source && existing.target === edge.target
-			)
+			(edge) =>
+				!compilationEdges.some(
+					(existing) =>
+						existing.source === edge.source && existing.target === edge.target
+				)
 		),
 	];
 

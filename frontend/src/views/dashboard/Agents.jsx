@@ -111,59 +111,13 @@ const Agents = () => {
 	const handleDeleteAgent = useCallback(async (id, name) => {
 		try {
 			await deleteAgent(id);
-			setAgents(agents.filter((a) => a._id !== id));
+			setAgents((prev) => prev.filter((a) => a._id !== id));
 			message.success(`Agent "${name}" deleted.`);
 		} catch (error) {
 			message.error("An error occurred while deleting the agent.");
 			console.error("Agent==>handleDeleteAgent :", error);
 		}
 	}, []);
-
-	// const handleTogglePlayPause = async (id) => {
-	// 	try {
-	// 		const targetAgentIndex = agents.findIndex((a) => a._id === id);
-
-	// 		if (targetAgentIndex === -1) {
-	// 			message.error("Agent not found.");
-	// 			return;
-	// 		}
-	// 		const targetStatus =
-	// 			agents[targetAgentIndex].status === "RUNNING" ? "IDLE" : "RUNNING";
-
-	// 		if (targetStatus === "RUNNING") {
-	// 			await playAgent(id);
-	// 		} else {
-	// 			await pauseAgent(id);
-	// 		}
-	// 		const updatedAgent = {
-	// 			...agents[targetAgentIndex],
-	// 			status: targetStatus,
-	// 		};
-	// 		const updatedAgents = [...agents];
-	// 		updatedAgents[targetAgentIndex] = updatedAgent;
-	// 		setAgents(updatedAgents);
-	// 		message.info(`Agent "${updatedAgent.name}" is now ${targetStatus}.`);
-
-	// 		// setAgents(
-	// 		// 	agents.map(async (a) => {
-	// 		// 		if (a.id === id) {
-	// 		// 			const targetStatus = a.status === "RUNNING" ? "IDLE" : "RUNNING";
-	// 		// 			if (targetStatus === "RUNNING") {
-	// 		// 				await playAgent(id);
-	// 		// 			} else {
-	// 		// 				await pauseAgent(id);
-	// 		// 			}
-	// 		// 			message.info(`Agent "${a.name}" is now ${targetStatus}.`);
-	// 		// 			return { ...a, status: targetStatus };
-	// 		// 		}
-	// 		// 		return a;
-	// 		// 	})
-	// 		// );
-	// 	} catch (error) {
-	// 		message.error("An error occurred while toggling agent status.");
-	// 		console.error("Agent==>handleTogglePlayPause :", error);
-	// 	}
-	// };
 
 	return (
 		<div className="flex flex-col flex-1 bg-white p-6 md:p-8 font-sans space-y-6 overflow-y-auto max-w-7xl mx-auto w-full select-none">

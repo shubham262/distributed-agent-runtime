@@ -27,7 +27,14 @@ import {
 	Tag,
 	message,
 } from "antd";
-import { FiCpu, FiGitBranch, FiLayers, FiPlus, FiSave } from "react-icons/fi";
+import {
+	FiCpu,
+	FiGitBranch,
+	FiLayers,
+	FiPlus,
+	FiSave,
+	FiTerminal,
+} from "react-icons/fi";
 import { useParams, useRouter } from "next/navigation";
 import CreateAgentModal from "@/components/dashboard/CreateAgentModal";
 import WorkflowNodeDrawer from "@/components/workflows/WorkflowNodeDrawer";
@@ -47,6 +54,7 @@ import {
 	isValidWorkflowConnection,
 	validateWorkflowGraph,
 } from "@/lib/workflowGraphValidation";
+import TextArea from "antd/es/input/TextArea";
 
 const WORKFLOW_START_NODE_ID = "workflow_start";
 const WORKFLOW_END_NODE_ID = "workflow_end";
@@ -71,6 +79,7 @@ const initialInfo = {
 	workflow: {
 		name: "Untitled Workflow",
 		description: "",
+		userPrompt: "", // Added default schema state
 		isActive: true,
 	},
 	viewport: { x: 0, y: 0, zoom: 1 },
@@ -307,9 +316,11 @@ const normalizeGraph = (uiGraph = {}, agents = []) => {
 	};
 };
 
+// Maps backend payload fields back into the local form representation
 const toWorkflowUpdate = (workflow = {}) => ({
 	name: workflow.name || "Untitled Workflow",
 	description: workflow.description || "",
+	userPrompt: workflow.userPrompt || "", // Added payload data extraction
 	isActive: workflow.isActive ?? true,
 });
 
@@ -413,8 +424,7 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 	const openNodeDrawer = useCallback(
 		(node) => {
 			updateInfo((current) => ({
-				selectedNode:
-					current.nodes.find((item) => item.id === node.id) || node,
+				selectedNode: current.nodes.find((item) => item.id === node.id) || node,
 				drawerOpen: true,
 			}));
 		},
@@ -746,6 +756,7 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 			const payload = {
 				name: values.name,
 				description: values.description || "",
+				userPrompt: values.userPrompt || "", // Added payload value mapping
 				isActive: values.isActive ?? true,
 				uiGraph,
 				agents: agentIds,
@@ -777,7 +788,7 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 	return (
 		<div className="flex h-full min-h-[calc(100vh-128px)] w-full flex-col gap-4">
 			<div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/60 p-5 shadow-sm md:flex-row md:items-end md:justify-between">
-				<div className="space-y-3">
+				<div className="w-full space-y-3">
 					<div className="flex items-center gap-2">
 						<Tag className="border-none bg-blue-50 text-blue-700">
 							Workflow Studio
@@ -809,34 +820,52 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 							layout="vertical"
 							initialValues={info.workflow}
 							onValuesChange={handleWorkflowValuesChange}
-							className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.8fr)_auto]"
+							className="flex flex-col gap-3 w-full"
 						>
-							<Form.Item
-								name="name"
-								label="Workflow Name"
-								rules={[
-									{ required: true, message: "Workflow name is required" },
-								]}
-								className="m-0"
-							>
-								<Input placeholder="Enter workflow name" />
-							</Form.Item>
-							<Form.Item name="description" label="Description" className="m-0">
-								<Input placeholder="Describe what this workflow does" />
-							</Form.Item>
-							<Form.Item
-								name="isActive"
-								label="Active"
-								valuePropName="checked"
-								className="m-0 flex items-center"
-							>
-								<Switch checkedChildren="On" unCheckedChildren="Off" />
-							</Form.Item>
+							<div className="grid gap-3 md:grid-cols-2">
+								<Form.Item
+									name="name"
+									label="Workflow Name"
+									rules={[
+										{ required: true, message: "Workflow name is required" },
+									]}
+									className="m-0"
+								>
+									<Input placeholder="Enter workflow name" />
+								</Form.Item>
+								<Form.Item
+									name="description"
+									label="Description"
+									className="m-0"
+								>
+									<Input placeholder="Describe what this workflow does" />
+								</Form.Item>
+							</div>
+
+							{/* Conditionally displays the initial entry user trigger prompt if workflowId is active */}
+							{workflowId && (
+								<Form.Item
+									name="userPrompt"
+									label={
+										<span className="flex items-center gap-1.5 font-medium text-slate-700">
+											<FiTerminal className="text-blue-600" /> Initial User
+											Prompt / Run Entry
+										</span>
+									}
+									className="m-0 mt-1 animate-fadeIn"
+								>
+									<TextArea
+										rows={2}
+										placeholder="Configure a default runtime prompt or starting context to seed state machine execution for this agent flow..."
+										className="rounded-xl border-slate-200 focus:border-blue-500"
+									/>
+								</Form.Item>
+							)}
 						</Form>
 					</div>
 				</div>
 
-				<div className="flex flex-wrap gap-3">
+				<div className="flex flex-wrap gap-3 self-end md:mb-0">
 					<Button icon={<FiPlus />} onClick={openCreateAgentModal}>
 						New Agent
 					</Button>

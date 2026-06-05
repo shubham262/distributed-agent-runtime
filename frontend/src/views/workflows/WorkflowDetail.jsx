@@ -176,11 +176,6 @@ const WorkflowDetail = () => {
 		await Promise.all([loadWorkflow(), loadRuns()]);
 	}, [loadRuns, loadWorkflow]);
 
-	const handlePublish = useCallback(() => {
-		promptForm.resetFields();
-		setPromptOpen(true);
-	}, [promptForm]);
-
 	const handlePublishSubmit = useCallback(async () => {
 		try {
 			const values = await promptForm.validateFields();
@@ -230,6 +225,7 @@ const WorkflowDetail = () => {
 				metadata: {
 					source: "schedule",
 				},
+				prompt: values.prompt?.trim() || "",
 			});
 			message.success("Workflow scheduled successfully.");
 			setScheduleOpen(false);
@@ -347,10 +343,10 @@ const WorkflowDetail = () => {
 						type="primary"
 						loading={publishing}
 						icon={<FiPlay />}
-						onClick={handlePublish}
+						onClick={handlePublishSubmit}
 						className="bg-blue-600 hover:bg-blue-500"
 					>
-						Publish
+						Run
 					</Button>
 					<Button icon={<FiRefreshCw />} onClick={refreshAll}>
 						Refresh
@@ -419,34 +415,6 @@ const WorkflowDetail = () => {
 					className="[&_.ant-table-tbody>tr]:cursor-pointer"
 				/>
 			</section>
-
-			<Modal
-				title="Run Workflow"
-				open={promptOpen}
-				onCancel={() => setPromptOpen(false)}
-				onOk={handlePublishSubmit}
-				okText="Run"
-				confirmLoading={publishing}
-				destroyOnHidden={false}
-			>
-				<Form form={promptForm} layout="vertical">
-					<Form.Item
-						name="prompt"
-						label="Task prompt"
-						rules={[
-							{
-								required: true,
-								message: "Enter a task for the agents to execute.",
-							},
-						]}
-					>
-						<Input.TextArea
-							rows={4}
-							placeholder="e.g. Research the latest trends in AI orchestration and write a summary."
-						/>
-					</Form.Item>
-				</Form>
-			</Modal>
 
 			<Modal
 				title="Schedule Workflow"

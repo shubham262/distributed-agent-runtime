@@ -46,6 +46,7 @@ const worker = new Worker(
 
 			const initialState = {
 				runId: runId,
+				user: metadata?.user || null,
 				...(taskPrompt
 					? {
 							messages: [new HumanMessage(taskPrompt)],
@@ -64,7 +65,7 @@ const worker = new Worker(
 			}
 
 			const finalState = await executableGraph.invoke(initialState, {
-				configurable: { thread_id: runId },
+				configurable: { thread_id: runId, user: metadata?.user || null },
 			});
 
 			const executionTimeMs = Date.now() - startTime;

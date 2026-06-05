@@ -10,10 +10,7 @@ const extractAgentIdsFromGraph = (uiGraph = {}) => {
 	return [
 		...new Set(
 			nodes
-				.filter(
-					(node) =>
-						node?.type === "agent" && node?.data?.agentId
-				)
+				.filter((node) => node?.type === "agent" && node?.data?.agentId)
 				.map((node) => node.data.agentId)
 		),
 	];
@@ -42,10 +39,9 @@ export const createWorkflow = async (req, res) => {
 			});
 		}
 
-		const derivedAgents =
-			Array.isArray(agents)
-				? agents
-				: extractAgentIdsFromGraph(uiGraph);
+		const derivedAgents = Array.isArray(agents)
+			? agents
+			: extractAgentIdsFromGraph(uiGraph);
 
 		if (derivedAgents.length > 0) {
 			for (const agentId of derivedAgents) {
@@ -371,7 +367,11 @@ export const executeWorkflow = async (req, res) => {
 		});
 		await newRun.save();
 		const runId = newRun._id.toString();
-		await enqueueWorkflow(id, runId, { ...metadata, prompt });
+		await enqueueWorkflow(id, runId, {
+			...metadata,
+			prompt,
+			user: { ...req.user },
+		});
 		res.status(202).json({
 			success: true,
 			message: "Workflow job queued for background processing execution.",
@@ -386,7 +386,12 @@ export const executeWorkflow = async (req, res) => {
 export const scheduleWorkflow = async (req, res) => {
 	try {
 		const { id } = req.params;
-		const { runAt, timezone = "UTC", metadata = {}, prompt = "" } = req.body || {};
+		const {
+			runAt,
+			timezone = "UTC",
+			metadata = {},
+			prompt = "",
+		} = req.body || {};
 		const userId = req.user?.id;
 
 		if (!userId) {
@@ -440,6 +445,7 @@ export const scheduleWorkflow = async (req, res) => {
 			jobId: newRun._id.toString(),
 			scheduledAt: parsedRunAt.toISOString(),
 			timezone,
+			user: { ...req.user },
 		});
 
 		workflow.schedule = {
