@@ -15,8 +15,8 @@ const workflowRunSchema = new mongoose.Schema(
 
 		status: {
 			type: String,
-			enum: ["QUEUED", "RUNNING", "PAUSED", "COMPLETED", "FAILED"],
-			default: "QUEUED",
+			enum: ["IDLE", "QUEUED", "RUNNING", "PAUSED", "COMPLETED", "FAILED"],
+			default: "IDLE",
 		},
 
 		output: { type: mongoose.Schema.Types.Mixed, default: null },

@@ -14,6 +14,11 @@ const agentSchema = new mongoose.Schema(
 		model: { type: String, default: "gpt-4-turbo" },
 		tools: [{ type: String }], // e.g., ['search', 'calculator']
 		channels: [{ type: String }], // e.g., ['telegram', 'web']
+		status: {
+			type: String,
+			enum: ["IDLE", "RUNNING", "PAUSED"],
+			default: "IDLE",
+		},
 	},
 	{ timestamps: true }
 );

@@ -34,3 +34,20 @@ export const editAgent = async (id, payload) => {
 		throw error;
 	}
 };
+
+export const playAgent = async (id, payload = {}) => {
+	try {
+		const { data } = await api.post(`/api/agents/${id}/play`, payload);
+		return data;
+	} catch (error) {
+		throw error;
+	}
+};
+export const pauseAgent = async (id) => {
+	try {
+		const { data } = await api.post(`/api/agents/${id}/pause`);
+		return data;
+	} catch (error) {
+		throw error;
+	}
+};
