@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import db from "../models/index.js";
-import { agentQueue, enqueueAgentRun } from "../queue/agentQueue.js";
+
 import { registry, toolsNameMap } from "../helpers/tools.js";
 
 const { Agent, AgentRun } = db;
@@ -151,121 +151,6 @@ export const deleteAgent = async (req, res) => {
 			deletedAgentId: id,
 		});
 	} catch (error) {
-		res.status(500).json({ error: error.message });
-	}
-};
-
-export const playAgent = async (req, res) => {
-	try {
-		const { id } = req.params;
-		const { inputPrompt = "", metadata = {} } = req.body || {};
-		const userId = req.user?.id || "anonymous_user";
-
-		const agent = await Agent.findById(id);
-		if (!agent) {
-			return res
-				.status(404)
-				.json({ error: "Compilation Error: Target agent profile not found." });
-		}
-
-		await Agent.findByIdAndUpdate(id, { status: "RUNNING" });
-
-		const newRun = new AgentRun({
-			agentId: id,
-			userId,
-			triggerType: "MANUAL",
-			status: "QUEUED",
-			inputPrompt: inputPrompt || null,
-			logs: [
-				{
-					action:
-						"Agent standalone execution triggered via Control Center API.",
-					type: "SYSTEM",
-				},
-			],
-		});
-
-		await newRun.save();
-		const runId = newRun._id.toString();
-
-		await enqueueAgentRun(id, runId, inputPrompt, metadata);
-
-		res.status(202).json({
-			success: true,
-			message:
-				"Standalone agent turn successfully queued for background processing.",
-			runId,
-			agentStatus: "RUNNING",
-		});
-	} catch (error) {
-		console.error("Play API Execution Error:", error);
-		res.status(500).json({ error: error.message });
-	}
-};
-
-export const pauseAgent = async (req, res) => {
-	try {
-		const { id } = req.params; // agentId
-
-		const agent = await Agent.findById(id);
-		if (!agent) {
-			return res.status(404).json({ error: "Target agent profile not found." });
-		}
-
-		await Agent.findByIdAndUpdate(id, { status: "IDLE" });
-
-		const activeRuns = await AgentRun.find({
-			agentId: id,
-			status: { $in: ["QUEUED", "RUNNING"] },
-		});
-
-		let dequeuedCount = 0;
-		let activeHaltedCount = 0;
-
-		for (const run of activeRuns) {
-			const runIdStr = run._id.toString();
-
-			const job = await agentQueue.getJob(runIdStr);
-
-			if (job) {
-				const jobState = await job.getState();
-
-				if (jobState === "active") {
-					await job.discard();
-					activeHaltedCount++;
-				} else if (jobState === "waiting" || jobState === "delayed") {
-					await job.remove();
-					dequeuedCount++;
-				}
-			}
-
-			await AgentRun.findByIdAndUpdate(run._id, {
-				status: "PAUSED",
-				errorReason:
-					"Execution terminated: Aborted by operator command from control console.",
-				$push: {
-					logs: {
-						action: `Pipeline hard stopped by user command. State in Redis was: ${
-							job ? await job.getState() : "unknown"
-						}.`,
-						type: "ERROR",
-					},
-				},
-			});
-		}
-
-		res.status(200).json({
-			success: true,
-			message: "Agent operations successfully halted.",
-			agentStatus: "IDLE",
-			telemetry: {
-				totalRunsIntercepted: activeRuns.length,
-				dequeuedFromWaiting: dequeuedCount,
-				haltedMidExecution: activeHaltedCount,
-			},
-		});
-	} catch (error) {
-		console.error("Pause API Execution Error:", error);
 		res.status(500).json({ error: error.message });
 	}
 };

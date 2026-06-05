@@ -5,7 +5,7 @@ import { toNodeHandler } from "better-auth/node";
 import agentRoutes from "./src/routes/agentRoute.js";
 import workflowRoutes from "./src/routes/workflowRoute.js";
 import "./src/worker/index.js";
-import "./src/worker/agentWorker.js";
+
 const app = express();
 const auth = await handleBetterAuth();
 const PORT = process.env.PORT || 3001;
