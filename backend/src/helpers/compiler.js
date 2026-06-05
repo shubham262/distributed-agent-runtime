@@ -32,11 +32,51 @@ const GraphState = Annotation.Root({
 		reducer: (left, right) => right,
 		default: () => "",
 	}),
+	stepCount: Annotation({
+		reducer: (left, right) => right,
+		default: () => 0,
+	}),
 });
 
-const createAgentNode = (agentConfig) => {
+const createPassThroughNode = (nodeConfig) => {
 	return async (state) => {
-		const { runId } = state;
+		const { runId, stepCount = 0 } = state;
+		const nextStep = stepCount + 1;
+		if (nextStep > 30) {
+			throw new Error(
+				`Workflow safeguard triggered while traversing node '${nodeConfig.id}'.`
+			);
+		}
+
+		if (runId) {
+			await WorkflowRun.findByIdAndUpdate(runId, {
+				$push: {
+					logs: {
+						agentId: nodeConfig.id,
+						agentName: nodeConfig.data?.label || nodeConfig.type || nodeConfig.id,
+						action: `Traversal node executed (${nodeConfig.type || "generic"}).`,
+					},
+				},
+			});
+		}
+
+		return {
+			currentTurn: nodeConfig.id,
+			stepCount: nextStep,
+		};
+	};
+};
+
+const createAgentNode = (agentConfig, nodeConfig) => {
+	return async (state) => {
+		const { runId, stepCount = 0 } = state;
+		const nextStep = stepCount + 1;
+		if (nextStep > 30) {
+			throw new Error(
+				`Workflow safeguard triggered while traversing agent '${agentConfig.name}'.`
+			);
+		}
+
 		console.log(
 			`🤖 [Run ID: ${runId}] Node executing: ${agentConfig.name} (${agentConfig.role})`
 		);
@@ -109,6 +149,7 @@ const createAgentNode = (agentConfig) => {
 			return {
 				messages: [llmResponse],
 				currentTurn: agentConfig._id.toString(),
+				stepCount: nextStep,
 			};
 		} catch (error) {
 			console.error(
@@ -138,33 +179,65 @@ export const compileWorkflow = async (workflowId) => {
 
 	const { uiGraph } = workflowDoc;
 	const graphBuilder = new StateGraph(GraphState);
+	const nodeEntries = Array.isArray(uiGraph?.nodes) ? uiGraph.nodes : [];
+	const edgeEntries = Array.isArray(uiGraph?.edges) ? uiGraph.edges : [];
+	const fallbackNodes =
+		nodeEntries.length > 0
+			? nodeEntries
+			: workflowDoc.agents.map((agent) => ({
+					id: agent._id.toString(),
+					type: "agent",
+					data: {
+						agentId: agent._id.toString(),
+						agent: agent.toObject(),
+					},
+			  }));
 
-	workflowDoc.agents.forEach((agent) => {
-		const compiledNodeFunction = createAgentNode(agent);
+	const agentLookup = new Map(
+		workflowDoc.agents.map((agent) => [agent._id.toString(), agent])
+	);
 
-		graphBuilder.addNode(agent._id.toString(), compiledNodeFunction);
+	fallbackNodes.forEach((node) => {
+		if (node?.type === "agent") {
+			const agentId = node?.data?.agentId || node?.id;
+			const agentConfig =
+				agentLookup.get(agentId) ||
+				agentLookup.get(node?.id) ||
+				agentLookup.get(String(agentId));
+
+			if (!agentConfig) {
+				graphBuilder.addNode(node.id, createPassThroughNode(node));
+				return;
+			}
+
+			const compiledNodeFunction = createAgentNode(agentConfig, node);
+			graphBuilder.addNode(node.id, compiledNodeFunction);
+			return;
+		}
+
+		graphBuilder.addNode(node.id, createPassThroughNode(node));
 	});
 
-	if (!uiGraph.edges || uiGraph.edges.length === 0) {
+	if (edgeEntries.length === 0) {
 		throw new Error(
 			"Compilation Error: Visual graph lacks topology paths or edge vectors."
 		);
 	}
 
-	const sourceNodes = new Set(uiGraph.edges.map((e) => e.source));
-	const targetNodes = new Set(uiGraph.edges.map((e) => e.target));
+	const sourceNodes = new Set(edgeEntries.map((e) => e.source));
+	const targetNodes = new Set(edgeEntries.map((e) => e.target));
 
 	const inferredEntryId =
-		uiGraph.edges.find((e) => !targetNodes.has(e.source))?.source ||
-		uiGraph.edges[0].source;
+		edgeEntries.find((e) => !targetNodes.has(e.source))?.source ||
+		edgeEntries[0].source;
 
 	const inferredExitId =
-		uiGraph.edges.find((e) => !sourceNodes.has(e.target))?.target ||
-		uiGraph.edges[uiGraph.edges.length - 1].target;
+		edgeEntries.find((e) => !sourceNodes.has(e.target))?.target ||
+		edgeEntries[edgeEntries.length - 1].target;
 
 	graphBuilder.addEdge(START, inferredEntryId);
 
-	uiGraph.edges.forEach((edge) => {
+	edgeEntries.forEach((edge) => {
 		graphBuilder.addEdge(edge.source, edge.target);
 	});
 

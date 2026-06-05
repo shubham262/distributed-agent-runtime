@@ -17,6 +17,15 @@ export const getAllWorkflows = async () => {
 	}
 };
 
+export const getWorkflowById = async (id) => {
+	try {
+		const { data } = await api.get(`/api/workflows/${id}`);
+		return data;
+	} catch (error) {
+		throw error;
+	}
+};
+
 export const deleteWorkflow = async (id) => {
 	try {
 		const { data } = await api.delete(`/api/workflows/${id}`);

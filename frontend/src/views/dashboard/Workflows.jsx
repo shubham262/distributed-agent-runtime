@@ -1,172 +1,252 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
-import React, { useState } from "react";
-import { Button,  Tag, Badge, message } from "antd";
+import React, { useCallback, useEffect, useState } from "react";
+import { Button, Empty, Skeleton, Tag, message } from "antd";
 import {
-	FiGitBranch,
-	FiPlus,
 	FiArrowRight,
-	FiPlay,
 	FiClock,
+	FiGitBranch,
 	FiLayers,
+	FiPlay,
+	FiPlus,
 } from "react-icons/fi";
 import { useRouter } from "next/navigation";
+import { getAllWorkflows, playWorkflow } from "@/service/workflow";
+
+const formatDate = (value) => {
+	if (!value) return "Recently";
+	try {
+		return new Intl.DateTimeFormat("en-US", {
+			month: "short",
+			day: "numeric",
+			hour: "numeric",
+			minute: "2-digit",
+		}).format(new Date(value));
+	} catch {
+		return "Recently";
+	}
+};
 
 const WorkflowsDashboard = () => {
 	const router = useRouter();
-	
-	
+	const [workflows, setWorkflows] = useState([]);
+	const [loading, setLoading] = useState(true);
+	const [runningId, setRunningId] = useState(null);
 
-	const [workflows, setWorkflows] = useState([
-		{
-			_id: "wf_01",
-			name: "Autonomous SEO & Brand Orchestration",
-			description:
-				"Scrapes ranking shifts, analyzes competitor keyword density clusters, and automatically generates high-authority target landing page scripts.",
-			agentCount: 3,
-			lastRunStatus: "COMPLETED",
-			updatedAt: "2 hours ago",
-		},
-		{
-			_id: "wf_02",
-			name: "LinkedIn Multi-Agent Post Pipeline",
-			description:
-				"Monitors engineering trends across GitHub, writes summarized technical breakdowns, and refactors copy to match pre-configured brand voice rules.",
-			agentCount: 2,
-			lastRunStatus: "RUNNING",
-			updatedAt: "Just now",
-		},
-		{
-			_id: "wf_03",
-			name: "AuraAuth Deepfake Verification Flow",
-			description:
-				"Ingests raw audio binaries, executes verification checks against spectral voice models, and dispatches automated containment alerts if spoofing is detected.",
-			agentCount: 4,
-			lastRunStatus: "FAILED",
-			updatedAt: "Yesterday",
-		},
-	]);
+	const loadWorkflows = useCallback(async () => {
+		try {
+			setLoading(true);
+			const data = await getAllWorkflows();
+			setWorkflows(data || []);
+		} catch (error) {
+			console.error("Workflow load error:", error);
+			message.error("Unable to load workflows.");
+		} finally {
+			setLoading(false);
+		}
+	}, []);
 
-	const handleOpenCreateModal = () => {
-		
+	useEffect(() => {
+		loadWorkflows();
+	}, [loadWorkflows]);
+
+	const handleQuickRun = async (e, workflow) => {
+		e.stopPropagation();
+		try {
+			setRunningId(workflow._id);
+			await playWorkflow(workflow._id, { metadata: { source: "dashboard" } });
+			message.success(`Workflow "${workflow.name}" queued successfully.`);
+		} catch (error) {
+			console.error("Workflow run error:", error);
+			message.error("Unable to queue the workflow.");
+		} finally {
+			setRunningId(null);
+		}
 	};
 
-	const handleFormSubmit = (values) => {};
-
-	const handleTriggerQuickRun = (e, name) => {
-		e.stopPropagation(); // Stop card click navigation event from firing
-		message.loading(`Compiling layout graph variables for "${name}"...`);
-		setTimeout(() => {
-			message.success(
-				`Job successfully queued inside BullMQ background thread cluster.`
-			);
-		}, 1000);
-	};
-
-	const handleNavigateToCanvas = (id) => {
+	const handleOpenWorkflow = (id) => {
 		router.push(`/dashboard/workflows/${id}`);
 	};
 
+	const totalAgents = workflows.reduce(
+		(sum, workflow) => sum + (workflow.agents?.length || 0),
+		0
+	);
+
 	return (
-		<div className="flex flex-col flex-1 bg-white p-6 md:p-8 font-sans space-y-6 overflow-y-auto max-w-7xl mx-auto w-full select-none">
-			{/* 1. TOP CONTROL & HEADER BANNER */}
-			<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-5 shrink-0">
-				<div className="flex flex-col">
-					<h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-1">
+		<div className="flex flex-col flex-1 space-y-6 overflow-y-auto rounded-3xl bg-white p-6 shadow-sm md:p-8">
+			<div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
+				<div className="space-y-1">
+					<h1 className="text-2xl font-bold tracking-tight text-slate-900">
 						Workflow Blueprints
 					</h1>
 					<p className="text-sm text-slate-500">
-						Design, compile, and execute multi-agent state machines via
-						background queue networks.
+						Build, inspect, and execute real workflow graphs backed by MongoDB
+						and BullMQ.
 					</p>
 				</div>
-				<Button
-					type="primary"
-					icon={<FiPlus />}
-					onClick={handleOpenCreateModal}
-					className="bg-blue-600 hover:bg-blue-500 shadow-sm border-none flex items-center justify-center h-9 font-medium text-sm w-full sm:w-auto"
-				>
-					Create New Pipeline
-				</Button>
+
+				<div className="flex flex-wrap gap-3">
+					<Button
+						icon={<FiGitBranch />}
+						onClick={() => router.push("/dashboard/workflows/builder")}
+					>
+						New Workflow
+					</Button>
+					<Button type="primary" icon={<FiPlus />} onClick={loadWorkflows}>
+						Refresh
+					</Button>
+				</div>
 			</div>
 
-			{/* 2. FLOW GALLERY CARDS BLOCK (Pure Flex wrapping layout, NO grids) */}
-			<div className="w-full flex flex-col md:flex-row flex-wrap gap-6 items-stretch">
-				{workflows.map((wf) => (
-					<div
-						key={wf._id}
-						onClick={() => handleNavigateToCanvas(wf._id)}
-						className="w-full md:w-[calc(50%-12px)] xl:w-[calc(33.33%-16px)] bg-white border border-slate-100 hover:border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+			<div className="grid gap-4 md:grid-cols-3">
+				<div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+								Workflows
+							</p>
+							<p className="mt-1 text-3xl font-bold text-slate-900">
+								{loading ? "--" : workflows.length}
+							</p>
+						</div>
+						<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+							<FiGitBranch />
+						</div>
+					</div>
+				</div>
+
+				<div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+								Agent References
+							</p>
+							<p className="mt-1 text-3xl font-bold text-slate-900">
+								{loading ? "--" : totalAgents}
+							</p>
+						</div>
+						<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+							<FiLayers />
+						</div>
+					</div>
+				</div>
+
+				<div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+								Execution Ready
+							</p>
+							<p className="mt-1 text-3xl font-bold text-slate-900">
+								{loading ? "--" : workflows.filter((wf) => wf.isActive !== false).length}
+							</p>
+						</div>
+						<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+							<FiPlay />
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{loading ? (
+				<div className="space-y-4">
+					{[0, 1, 2].map((index) => (
+						<div key={index} className="rounded-3xl border border-slate-100 p-5">
+							<Skeleton active paragraph={{ rows: 3 }} />
+						</div>
+					))}
+				</div>
+			) : workflows.length === 0 ? (
+				<div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-10">
+					<Empty
+						description="No workflows created yet."
+						image={Empty.PRESENTED_IMAGE_SIMPLE}
 					>
-						{/* Upper Details Block */}
-						<div className="flex flex-col space-y-3.5">
-							{/* Card Header Information */}
-							<div className="flex items-start justify-between gap-3">
-								<div className="flex items-center space-x-2.5 min-w-0">
-									<div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-lg shrink-0">
+						<Button
+							type="primary"
+							icon={<FiGitBranch />}
+							onClick={() => router.push("/dashboard/workflows/builder")}
+						>
+							Create your first workflow
+						</Button>
+					</Empty>
+				</div>
+			) : (
+				<div className="grid gap-4 lg:grid-cols-2">
+					{workflows.map((workflow) => (
+						<div
+							key={workflow._id}
+							role="button"
+							tabIndex={0}
+							onClick={() => handleOpenWorkflow(workflow._id)}
+							className="group rounded-3xl border border-slate-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg"
+						>
+							<div className="flex items-start justify-between gap-4">
+								<div className="flex min-w-0 items-start gap-3">
+									<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
 										<FiGitBranch />
 									</div>
-									<h3 className="text-sm font-bold text-slate-900 tracking-tight leading-tight truncate group-hover:text-blue-600 transition-colors">
-										{wf.name}
-									</h3>
+									<div className="min-w-0">
+										<h3 className="truncate text-lg font-semibold text-slate-900 group-hover:text-blue-600">
+											{workflow.name}
+										</h3>
+										<p className="mt-1 line-clamp-2 text-sm text-slate-500">
+											{workflow.description || "No description provided."}
+										</p>
+									</div>
 								</div>
 
-								{/* Network Run Status Tag */}
 								<Tag
-									color={
-										wf.lastRunStatus === "RUNNING"
-											? "processing"
-											: wf.lastRunStatus === "COMPLETED"
-											? "success"
-											: "error"
-									}
-									className="rounded border-none m-0 font-medium text-[10px] uppercase tracking-wider px-2 shrink-0"
+									className={`m-0 border-none ${
+										workflow.isActive === false
+											? "bg-slate-100 text-slate-600"
+											: "bg-emerald-50 text-emerald-700"
+									}`}
 								>
-									<span className="flex items-center gap-1">
-										{wf.lastRunStatus === "RUNNING" && (
-											<Badge status="processing" size="small" />
-										)}
-										{wf.lastRunStatus}
-									</span>
+									{workflow.isActive === false ? "Paused" : "Active"}
 								</Tag>
 							</div>
 
-							{/* Compiled Topology Core Summary Text */}
-							<p className="text-xs text-slate-500 leading-relaxed line-clamp-3">
-								{wf.description}
-							</p>
-
-							{/* Structural Network Indicators */}
-							<div className="flex items-center space-x-4 pt-1 text-xs text-slate-400 font-medium">
+							<div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
 								<div className="flex items-center gap-1.5">
-									<FiLayers size={13} className="text-slate-300" />
-									<span>{wf.agentCount} Node Agents</span>
+									<FiLayers className="text-slate-400" />
+									<span>{workflow.agents?.length || 0} agents</span>
 								</div>
 								<div className="flex items-center gap-1.5">
-									<FiClock size={13} className="text-slate-300" />
-									<span>{wf.updatedAt}</span>
+									<FiClock className="text-slate-400" />
+									<span>{formatDate(workflow.updatedAt)}</span>
 								</div>
 							</div>
-						</div>
 
-						{/* Lower Action Operations Block */}
-						<div className="flex items-center justify-between mt-6 pt-3 border-t border-slate-50 shrink-0">
-							<Button
-								size="small"
-								icon={<FiPlay size={11} />}
-								onClick={(e) => handleTriggerQuickRun(e, wf.name)}
-								className="bg-slate-50 hover:bg-blue-50 border-none text-slate-600 hover:text-blue-600 text-xs font-semibold h-8 px-3 rounded flex items-center gap-1 transition-all"
-							>
-								Quick Run
-							</Button>
-
-							<span className="text-xs font-semibold text-blue-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
-								Open Studio <FiArrowRight size={13} />
-							</span>
+							<div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+								<Button
+									size="small"
+									icon={<FiArrowRight size={12} />}
+									onClick={(e) => {
+										e.stopPropagation();
+										handleOpenWorkflow(workflow._id);
+									}}
+									className="border-none bg-slate-50 text-slate-600 hover:bg-blue-50 hover:text-blue-600"
+								>
+									Open Studio
+								</Button>
+								<Button
+									type="primary"
+									size="small"
+									icon={<FiPlay size={12} />}
+									loading={runningId === workflow._id}
+									onClick={(e) => handleQuickRun(e, workflow)}
+									className="bg-blue-600"
+								>
+									Quick Run
+								</Button>
+							</div>
 						</div>
-					</div>
-				))}
-			</div>
+					))}
+				</div>
+			)}
 		</div>
 	);
 };
