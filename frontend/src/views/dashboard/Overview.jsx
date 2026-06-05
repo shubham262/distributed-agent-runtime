@@ -26,8 +26,6 @@ import {
 	statusColor,
 } from "@/lib/runUtils";
 
-const TOKEN_LIMIT = 1_000_000;
-
 const Overview = () => {
 	const router = useRouter();
 	const [loading, setLoading] = useState(true);
@@ -70,8 +68,9 @@ const Overview = () => {
 
 	const runMetrics = useMemo(() => aggregateRunMetrics(runs), [runs]);
 	const totalTokens = runMetrics.promptTokens + runMetrics.completionTokens;
-	const activeWorkflows = workflows.filter((workflow) => workflow.isActive !== false)
-		.length;
+	const activeWorkflows = workflows.filter(
+		(workflow) => workflow.isActive !== false
+	).length;
 	const recentRuns = runs.slice(0, 5);
 
 	const estimatedCost =
@@ -105,7 +104,9 @@ const Overview = () => {
 					className="rounded border-none px-2.5 py-0.5 font-sans text-xs font-medium"
 				>
 					<span className="flex items-center gap-1.5">
-						{status === "RUNNING" ? <Badge status="processing" size="small" /> : null}
+						{status === "RUNNING" ? (
+							<Badge status="processing" size="small" />
+						) : null}
 						{status}
 					</span>
 				</Tag>
@@ -148,9 +149,7 @@ const Overview = () => {
 					type="text"
 					size="small"
 					className="flex items-center gap-1 font-sans text-xs font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-500"
-					onClick={() =>
-						router.push(`/dashboard/runs?runId=${record._id}`)
-					}
+					onClick={() => router.push(`/dashboard/runs?runId=${record._id}`)}
 				>
 					View Logs <FiArrowRight size={12} />
 				</Button>
@@ -252,9 +251,6 @@ const Overview = () => {
 								<span className="text-2xl font-bold text-slate-900">
 									{formatTokens(totalTokens)}
 								</span>
-								<span className="text-xs font-medium text-slate-400">
-									/ {formatTokens(TOKEN_LIMIT)} limit
-								</span>
 							</div>
 						</div>
 						<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-xl text-blue-600">
@@ -262,13 +258,6 @@ const Overview = () => {
 						</div>
 					</div>
 					<div className="flex w-full flex-col gap-1.5">
-						<Progress
-							percent={Math.min((totalTokens / TOKEN_LIMIT) * 100, 100)}
-							showInfo={false}
-							strokeColor="#2563eb"
-							railColor="#f1f5f9"
-							size={6}
-						/>
 						<div className="flex justify-between text-[11px] font-medium text-slate-400">
 							<span>
 								Input: {formatTokens(runMetrics.promptTokens)}
@@ -317,7 +306,9 @@ const Overview = () => {
 			<div className="flex w-full flex-col items-start justify-between gap-4 rounded-xl border border-slate-100/70 bg-slate-50 p-4 shadow-inner sm:flex-row sm:items-center">
 				<div className="flex items-center gap-3">
 					<div className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg text-blue-600 shadow-sm">
-						<FiActivity className={runMetrics.activeRuns > 0 ? "animate-pulse" : ""} />
+						<FiActivity
+							className={runMetrics.activeRuns > 0 ? "animate-pulse" : ""}
+						/>
 					</div>
 					<div className="flex flex-col">
 						<p className="mb-1 text-sm font-semibold leading-none text-slate-800">
@@ -371,7 +362,9 @@ const Overview = () => {
 						rowKey="_id"
 						loading={loading}
 						pagination={false}
-						locale={{ emptyText: "No runs yet. Publish a workflow to get started." }}
+						locale={{
+							emptyText: "No runs yet. Publish a workflow to get started.",
+						}}
 						className="border-none font-sans [&_.ant-table-cell]:border-b [&_.ant-table-cell]:border-slate-100/60 [&_.ant-table-cell]:py-4 [&_.ant-table-row]:hover:bg-slate-50/40 [&_.ant-table-thead_th]:border-b [&_.ant-table-thead_th]:border-slate-100 [&_.ant-table-thead_th]:bg-slate-50/70 [&_.ant-table-thead_th]:text-[11px] [&_.ant-table-thead_th]:font-semibold [&_.ant-table-thead_th]:uppercase [&_.ant-table-thead_th]:tracking-wider [&_.ant-table-thead_th]:text-slate-400"
 					/>
 				</div>

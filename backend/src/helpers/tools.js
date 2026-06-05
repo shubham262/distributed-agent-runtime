@@ -1,6 +1,7 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import tvly from "../config/tavily.js";
+import transporter from "../config/nodemailer.js";
 
 const webSearch = tool(
 	async ({ query, maxResults }) => {
@@ -97,13 +98,54 @@ const deepResearch = tool(
 		}),
 	}
 );
+const sendEmail = tool(
+	async ({ to, subject, body, html }) => {
+		const mailOptions = {
+			from: process.env.SENDERS_EMAIL_ID,
+			to,
+			subject,
+			...(html ? { html } : { text: body }),
+		};
 
+		const info = await transporter.sendMail(mailOptions);
+
+		return {
+			success: true,
+			messageId: info.messageId,
+			to,
+			subject,
+		};
+	},
+	{
+		name: "send-email",
+		description:
+			"Send an email to a specified address. Use this when you need to deliver a report, notification, or any content via email. If sending a report or structured content, always use the html parameter to send a beautifully formatted email instead of plain text.",
+		schema: z.object({
+			to: z.string().email().describe("Recipient email address."),
+			subject: z.string().describe("Email subject line."),
+			body: z
+				.string()
+				.optional()
+				.describe(
+					"Plain text fallback body. Used only if html is not provided."
+				),
+			html: z
+				.string()
+				.optional()
+				.describe(
+					"HTML version of the email body. Always prefer this for reports and structured content."
+				),
+		}),
+	}
+);
 export const registry = {
 	"web-search": webSearch,
 	"deep-research": deepResearch,
+	"send-email": sendEmail,
 };
 export const toolsNameMap = {
 	"web-search": "Web Search",
 	"deep-research": "Deep Research",
+	"send-email": "Send Email",
 };
 export const getToolByName = (name) => registry[name] || null;
