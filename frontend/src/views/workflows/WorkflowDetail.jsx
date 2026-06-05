@@ -399,7 +399,7 @@ const WorkflowDetail = () => {
 				onOk={handleScheduleSubmit}
 				okText="Schedule"
 				confirmLoading={savingSchedule}
-				destroyOnClose={false}
+				destroyOnHidden={false}
 			>
 				<Form
 					form={scheduleForm}

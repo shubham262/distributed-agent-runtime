@@ -17,6 +17,15 @@ export const getAllAgent = async () => {
 	}
 };
 
+export const getAgentTools = async () => {
+	try {
+		const { data } = await api.get(`/api/agents/agents/tools`);
+		return data;
+	} catch (error) {
+		throw error;
+	}
+};
+
 export const deleteAgent = async (id) => {
 	try {
 		const { data } = await api.delete(`/api/agents/${id}`);

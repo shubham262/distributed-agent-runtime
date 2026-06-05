@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import db from "../models/index.js";
 import { agentQueue, enqueueAgentRun } from "../queue/agentQueue.js";
+import { registry, toolsNameMap } from "../helpers/tools.js";
 
 const { Agent, AgentRun } = db;
 
@@ -51,6 +52,22 @@ export const getAgents = async (req, res) => {
 			userId,
 		}).sort({ createdAt: -1 });
 		res.status(200).json(agents);
+	} catch (error) {
+		res.status(500).json({ error: error.message });
+	}
+};
+
+export const getAgentsTools = async (req, res) => {
+	try {
+		const tools = Object.keys(registry);
+		const agentsTools = tools.map((toolName) => {
+			return {
+				value: toolName,
+				label: toolsNameMap[toolName] || toolName,
+			};
+		});
+
+		res.status(200).json(agentsTools);
 	} catch (error) {
 		res.status(500).json({ error: error.message });
 	}

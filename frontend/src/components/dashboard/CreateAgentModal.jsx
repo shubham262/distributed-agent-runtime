@@ -1,6 +1,17 @@
-import React from "react";
-import { Button, Modal, Form, Input, Select, Switch, InputNumber } from "antd";
+/* eslint-disable react-hooks/immutability */
+import React, { useCallback, useEffect, useState } from "react";
+import {
+	Button,
+	Modal,
+	Form,
+	Input,
+	Select,
+	Switch,
+	InputNumber,
+	message,
+} from "antd";
 import { FiSliders } from "react-icons/fi";
+import { getAgentTools } from "@/service/agent";
 const CreateAgentModal = ({
 	isModalOpen,
 	setIsModalOpen,
@@ -9,6 +20,23 @@ const CreateAgentModal = ({
 	availableTools,
 	editingAgent,
 }) => {
+	const [info, setInfo] = useState({
+		tools: [],
+	});
+
+	useEffect(() => {
+		fetchTools();
+	}, []);
+	const fetchTools = useCallback(async () => {
+		try {
+			const response = await getAgentTools();
+			setInfo((prev) => ({ ...prev, tools: response }));
+		} catch (error) {
+			console.error("Error fetching tools:", error);
+			setInfo((prev) => ({ ...prev, tools: [] }));
+			message.error("Failed to fetch available tools. Please try again later.");
+		}
+	}, []);
 	return (
 		<Modal
 			title={
@@ -97,9 +125,6 @@ const CreateAgentModal = ({
 						<Select.Option value="gpt-4o-mini">
 							gpt-4o-mini (High Speed / Lightweight)
 						</Select.Option>
-						<Select.Option value="gpt-4o">
-							gpt-4o (High-Fidelity Complex Analysis)
-						</Select.Option>
 					</Select>
 				</Form.Item>
 
@@ -115,38 +140,12 @@ const CreateAgentModal = ({
 					<Select
 						mode="multiple"
 						placeholder="Select operational extensions..."
-						options={availableTools}
+						options={info?.tools || []}
 						className="w-full"
 					/>
 				</Form.Item>
 
 				{/* Operational Limits and Memory Row */}
-				<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-lg gap-4">
-					<Form.Item
-						label={
-							<span className="text-xs font-bold text-slate-600">
-								Thread Context Memory
-							</span>
-						}
-						name="memory"
-						valuePropName="checked"
-						className="m-0 flex items-center justify-between w-full sm:w-auto gap-4"
-					>
-						<Switch checkedChildren="Active" unCheckedChildren="Disabled" />
-					</Form.Item>
-
-					<Form.Item
-						label={
-							<span className="text-xs font-bold text-slate-600">
-								Max Token Budget
-							</span>
-						}
-						name="maxTokens"
-						className="m-0 flex items-center justify-between w-full sm:w-auto gap-4"
-					>
-						<InputNumber min={500} max={10000} step={500} className="w-24" />
-					</Form.Item>
-				</div>
 
 				{/* Footer Actions Submit */}
 				<div className="flex justify-end gap-3 border-t border-slate-100 pt-4 mt-6">

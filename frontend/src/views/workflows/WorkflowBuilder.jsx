@@ -27,13 +27,7 @@ import {
 	Tag,
 	message,
 } from "antd";
-import {
-	FiCpu,
-	FiGitBranch,
-	FiLayers,
-	FiPlus,
-	FiSave,
-} from "react-icons/fi";
+import { FiCpu, FiGitBranch, FiLayers, FiPlus, FiSave } from "react-icons/fi";
 import { useParams, useRouter } from "next/navigation";
 import CreateAgentModal from "@/components/dashboard/CreateAgentModal";
 import WorkflowNodeDrawer from "@/components/workflows/WorkflowNodeDrawer";
@@ -48,13 +42,6 @@ import {
 const WORKFLOW_START_NODE_ID = "workflow_start";
 const WORKFLOW_END_NODE_ID = "workflow_end";
 const WORKFLOW_SCHEMA_VERSION = 2;
-
-const TOOL_OPTIONS = [
-	{ value: "web-search", label: "Web Search" },
-	{ value: "extract-html", label: "HTML Extractor" },
-	{ value: "seo-analyzer", label: "SEO Analyzer" },
-	{ value: "calculator", label: "Calculator" },
-];
 
 const CHANNEL_OPTIONS = [
 	{ value: "web", label: "Web" },
@@ -144,7 +131,8 @@ const getBounds = (nodes = []) => {
 		minX: Math.min(...xValues),
 		maxX: Math.max(...xValues),
 		centerY:
-			yValues.reduce((sum, value) => sum + value, 0) / Math.max(yValues.length, 1),
+			yValues.reduce((sum, value) => sum + value, 0) /
+			Math.max(yValues.length, 1),
 	};
 };
 
@@ -173,11 +161,11 @@ const inferBoundaryNodeIds = (edges = []) => {
 };
 
 const chainEdges = (nodes = []) =>
-	nodes
-		.slice(0, -1)
-		.map((node, index) =>
-			makeWorkflowEdge(node.id, nodes[index + 1].id, { sourceHandle: undefined })
-		);
+	nodes.slice(0, -1).map((node, index) =>
+		makeWorkflowEdge(node.id, nodes[index + 1].id, {
+			sourceHandle: undefined,
+		})
+	);
 
 const createDefaultGraph = () => {
 	const startNode = makeStartNode();
@@ -196,7 +184,8 @@ const sanitizeNode = (node) => {
 };
 
 const sanitizeEdge = (edge) => {
-	const { selected, animated, style, focusable, interactionWidth, ...rest } = edge;
+	const { selected, animated, style, focusable, interactionWidth, ...rest } =
+		edge;
 	return rest;
 };
 
@@ -253,7 +242,9 @@ const normalizeGraph = (uiGraph = {}, agents = []) => {
 			return createDefaultGraph();
 		}
 
-		const agentNodes = agents.map((agent, index) => makeAgentNode(agent, index));
+		const agentNodes = agents.map((agent, index) =>
+			makeAgentNode(agent, index)
+		);
 		const { minX, maxX, centerY } = getBounds(agentNodes);
 		const nextNodes = [
 			makeStartNode({ x: minX - 220, y: centerY }),
@@ -322,7 +313,8 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 	const [info, setInfo] = useState(initialInfo);
 	const { setViewport, fitView } = useReactFlow();
 
-	const workflowTitle = Form.useWatch("name", workflowForm) || info.workflow.name;
+	const workflowTitle =
+		Form.useWatch("name", workflowForm) || info.workflow.name;
 
 	const updateInfo = useCallback((updater) => {
 		setInfo((current) => {
@@ -529,8 +521,12 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 				return false;
 			}
 
-			const sourceNode = info.nodes.find((node) => node.id === connection.source);
-			const targetNode = info.nodes.find((node) => node.id === connection.target);
+			const sourceNode = info.nodes.find(
+				(node) => node.id === connection.source
+			);
+			const targetNode = info.nodes.find(
+				(node) => node.id === connection.target
+			);
 
 			if (!sourceNode || !targetNode) {
 				return false;
@@ -605,7 +601,9 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 
 					updateInfo((current) => ({
 						agents: current.agents.map((agent) =>
-							String(agent._id) === String(updatedAgent._id) ? updatedAgent : agent
+							String(agent._id) === String(updatedAgent._id)
+								? updatedAgent
+								: agent
 						),
 						nodes: current.nodes.map((node) =>
 							node.id === selectedNode.id ||
@@ -812,7 +810,9 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 							<Form.Item
 								name="name"
 								label="Workflow Name"
-								rules={[{ required: true, message: "Workflow name is required" }]}
+								rules={[
+									{ required: true, message: "Workflow name is required" },
+								]}
 								className="m-0"
 							>
 								<Input placeholder="Enter workflow name" />
@@ -836,7 +836,10 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 					<Button icon={<FiPlus />} onClick={openCreateAgentModal}>
 						New Agent
 					</Button>
-					<Button icon={<FiLayers />} onClick={() => addNodeToCanvas(makeLoopNode)}>
+					<Button
+						icon={<FiLayers />}
+						onClick={() => addNodeToCanvas(makeLoopNode)}
+					>
 						Add Loop
 					</Button>
 					<Button
@@ -875,12 +878,18 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 					<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-3">
 						<div className="flex items-center justify-between gap-3">
 							<div>
-								<p className="text-sm font-medium text-slate-900">Create agent</p>
+								<p className="text-sm font-medium text-slate-900">
+									Create agent
+								</p>
 								<p className="text-xs text-slate-500">
 									Build a new agent without leaving the studio.
 								</p>
 							</div>
-							<Button type="primary" className="bg-blue-600" onClick={openCreateAgentModal}>
+							<Button
+								type="primary"
+								className="bg-blue-600"
+								onClick={openCreateAgentModal}
+							>
 								Add
 							</Button>
 						</div>
@@ -899,7 +908,10 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 									type="button"
 									onClick={() =>
 										updateInfo((current) => ({
-											nodes: [...current.nodes, makeAgentNode(agent, current.nodes.length)],
+											nodes: [
+												...current.nodes,
+												makeAgentNode(agent, current.nodes.length),
+											],
 										}))
 									}
 									className="group w-full rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-blue-300 hover:shadow-md"
@@ -914,10 +926,16 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 													{agent.name}
 												</p>
 												<Badge
-													status={agent.status === "RUNNING" ? "processing" : "default"}
+													status={
+														agent.status === "RUNNING"
+															? "processing"
+															: "default"
+													}
 												/>
 											</div>
-											<p className="mt-0.5 text-xs text-slate-500">{agent.role}</p>
+											<p className="mt-0.5 text-xs text-slate-500">
+												{agent.role}
+											</p>
 											<div className="mt-2 flex flex-wrap gap-1">
 												<Tag className="m-0 border-none bg-slate-100 text-slate-600">
 													{agent.model || "gpt-4o-mini"}
@@ -1036,12 +1054,13 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 				setIsModalOpen={(open) =>
 					updateInfo({
 						agentModalOpen: open,
-						creatingAgentPlacement: open ? info.creatingAgentPlacement : "canvas",
+						creatingAgentPlacement: open
+							? info.creatingAgentPlacement
+							: "canvas",
 					})
 				}
 				form={agentForm}
 				onFinish={handleCreateAgent}
-				availableTools={TOOL_OPTIONS}
 				editingAgent={null}
 			/>
 		</div>

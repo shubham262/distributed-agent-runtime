@@ -2,7 +2,6 @@ import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import tvly from "../config/tavily.js";
 
-
 const webSearch = tool(
 	async ({ query, maxResults }) => {
 		const response = await tvly.search(query, {
@@ -38,7 +37,6 @@ const webSearch = tool(
 		}),
 	}
 );
-
 
 const RESEARCH_POLL_INTERVAL_MS = 3000;
 const RESEARCH_MAX_POLLS = 40; // ~2 minutes ceiling
@@ -100,9 +98,12 @@ const deepResearch = tool(
 	}
 );
 
-const registry = {
+export const registry = {
 	"web-search": webSearch,
 	"deep-research": deepResearch,
 };
-
+export const toolsNameMap = {
+	"web-search": "Web Search",
+	"deep-research": "Deep Research",
+};
 export const getToolByName = (name) => registry[name] || null;

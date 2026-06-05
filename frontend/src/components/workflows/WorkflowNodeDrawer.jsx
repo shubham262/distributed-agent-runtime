@@ -1,15 +1,10 @@
+/* eslint-disable react-hooks/immutability */
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Drawer, Empty, Form, Input, InputNumber, Button, Select } from "antd";
 import { FiSave, FiSettings } from "react-icons/fi";
-
-const TOOL_OPTIONS = [
-	{ value: "web-search", label: "Web Search" },
-	{ value: "extract-html", label: "HTML Extractor" },
-	{ value: "seo-analyzer", label: "SEO Analyzer" },
-	{ value: "calculator", label: "Calculator" },
-];
+import { getAgentTools } from "@/service/agent";
 
 const CHANNEL_OPTIONS = [
 	{ value: "web", label: "Web" },
@@ -67,7 +62,23 @@ const WorkflowNodeDrawer = ({
 	saving,
 }) => {
 	const [form] = Form.useForm();
+	const [info, setInfo] = useState({
+		tools: [],
+	});
 
+	useEffect(() => {
+		fetchTools();
+	}, []);
+	const fetchTools = useCallback(async () => {
+		try {
+			const response = await getAgentTools();
+			setInfo((prev) => ({ ...prev, tools: response }));
+		} catch (error) {
+			console.error("Error fetching tools:", error);
+			setInfo((prev) => ({ ...prev, tools: [] }));
+			message.error("Failed to fetch available tools. Please try again later.");
+		}
+	}, []);
 	useEffect(() => {
 		if (open && selectedNode) {
 			form.setFieldsValue(getInitialValues(selectedNode));
@@ -156,7 +167,7 @@ const WorkflowNodeDrawer = ({
 								<Select options={MODEL_OPTIONS} />
 							</Form.Item>
 							<Form.Item name="tools" label="Tools">
-								<Select mode="multiple" options={TOOL_OPTIONS} />
+								<Select mode="multiple" options={info?.tools} />
 							</Form.Item>
 							<Form.Item name="channels" label="Channels">
 								<Select mode="multiple" options={CHANNEL_OPTIONS} />
