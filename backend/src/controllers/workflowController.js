@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import db from "../models/index.js";
-import { enqueueWorkflow } from "../queue/index.js";
+import { enqueueWorkflow, workflowQueue } from "../queue/index.js";
 
 const { Workflow, WorkflowRun } = db;
 
@@ -120,6 +120,60 @@ export const getWorkflows = async (req, res) => {
 	}
 };
 
+export const getWorkflowRuns = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const userId = req.user?.id;
+
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+			return res.status(400).json({
+				error: "Invalid Request: The provided workflow ID format is invalid.",
+			});
+		}
+
+		const runs = await WorkflowRun.find({
+			workflowId: id,
+			...(userId ? { userId } : {}),
+		})
+			.sort({ createdAt: -1 })
+			.limit(50);
+
+		res.status(200).json(runs);
+	} catch (error) {
+		console.error("Error fetching workflow runs:", error);
+		res.status(500).json({ error: error.message });
+	}
+};
+
+export const getWorkflowRunById = async (req, res) => {
+	try {
+		const { runId } = req.params;
+		const userId = req.user?.id;
+
+		if (!mongoose.Types.ObjectId.isValid(runId)) {
+			return res.status(400).json({
+				error: "Invalid Request: The provided run ID format is invalid.",
+			});
+		}
+
+		const run = await WorkflowRun.findOne({
+			_id: runId,
+			...(userId ? { userId } : {}),
+		}).populate("workflowId");
+
+		if (!run) {
+			return res.status(404).json({
+				error: `Resource Not Found: No workflow run matched ID ${runId}`,
+			});
+		}
+
+		res.status(200).json(run);
+	} catch (error) {
+		console.error("Error fetching workflow run:", error);
+		res.status(500).json({ error: error.message });
+	}
+};
+
 export const updateWorkflow = async (req, res) => {
 	try {
 		const { id } = req.params;
@@ -234,16 +288,25 @@ export const deleteWorkflow = async (req, res) => {
 			});
 		}
 
-		const deletedWorkflow = await Workflow.findOneAndDelete({
+		const workflow = await Workflow.findOne({
 			_id: id,
 			...(userId ? { userId } : {}),
 		});
 
-		if (!deletedWorkflow) {
+		if (!workflow) {
 			return res.status(404).json({
 				error: `Resource Not Found: No workflow layout matched ID ${id}`,
 			});
 		}
+
+		if (workflow.schedule?.jobId) {
+			const scheduledJob = await workflowQueue.getJob(workflow.schedule.jobId);
+			if (scheduledJob) {
+				await scheduledJob.remove();
+			}
+		}
+
+		await Workflow.deleteOne({ _id: id });
 
 		res.status(200).json({
 			message: "Workflow layout cleanly deleted from tracking database.",
@@ -294,6 +357,88 @@ export const executeWorkflow = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error executing workflow:", error);
+		res.status(500).json({ error: error.message });
+	}
+};
+
+export const scheduleWorkflow = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { runAt, timezone = "UTC", metadata = {} } = req.body || {};
+		const userId = req.user?.id;
+
+		if (!userId) {
+			return res.status(401).json({
+				error: "Authentication required to schedule a workflow.",
+			});
+		}
+
+		const workflow = await Workflow.findOne({
+			_id: id,
+			userId,
+		});
+
+		if (!workflow) {
+			return res.status(404).json({
+				error: `Resource Not Found: No workflow layout matched ID ${id}`,
+			});
+		}
+
+		const parsedRunAt = new Date(runAt);
+		if (Number.isNaN(parsedRunAt.getTime())) {
+			return res.status(400).json({
+				error: "Validation Failed: 'runAt' must be a valid date/time value.",
+			});
+		}
+
+		const delay = Math.max(parsedRunAt.getTime() - Date.now(), 0);
+		if (workflow.schedule?.jobId) {
+			const existingJob = await workflowQueue.getJob(workflow.schedule.jobId);
+			if (existingJob) {
+				await existingJob.remove();
+			}
+		}
+
+		const newRun = new WorkflowRun({
+			workflowId: id,
+			userId,
+			status: "QUEUED",
+			logs: [
+				{
+					action: `Workflow scheduled for ${parsedRunAt.toISOString()}.`,
+				},
+			],
+		});
+		await newRun.save();
+
+		await enqueueWorkflow(id, newRun._id.toString(), {
+			...metadata,
+			delay,
+			jobId: newRun._id.toString(),
+			scheduledAt: parsedRunAt.toISOString(),
+			timezone,
+		});
+
+		workflow.schedule = {
+			enabled: true,
+			runAt: parsedRunAt,
+			timezone,
+			status: "SCHEDULED",
+			jobId: newRun._id.toString(),
+			lastRunId: newRun._id.toString(),
+			lastRunAt: null,
+			metadata,
+		};
+		await workflow.save();
+
+		res.status(202).json({
+			success: true,
+			message: "Workflow scheduled successfully.",
+			runId: newRun._id.toString(),
+			scheduledFor: parsedRunAt.toISOString(),
+		});
+	} catch (error) {
+		console.error("Error scheduling workflow:", error);
 		res.status(500).json({ error: error.message });
 	}
 };

@@ -4,7 +4,7 @@ import { connection } from "../config/redis.js";
 import db from "../models/index.js";
 import { compileWorkflow } from "../helpers/compiler.js";
 
-const { WorkflowRun } = db;
+const { WorkflowRun, Workflow } = db;
 
 const worker = new Worker(
 	"workflow-execution",
@@ -22,6 +22,14 @@ const worker = new Worker(
 					action:
 						"Worker picked up job from Redis queue. Beginning execution execution.",
 				},
+			},
+		});
+
+		await Workflow.findByIdAndUpdate(workflowId, {
+			$set: {
+				"schedule.status": "RUNNING",
+				"schedule.lastRunId": runId,
+				"schedule.lastRunAt": new Date(),
 			},
 		});
 
@@ -59,6 +67,13 @@ const worker = new Worker(
 				},
 			});
 
+			await Workflow.findByIdAndUpdate(workflowId, {
+				$set: {
+					"schedule.status": "COMPLETED",
+					"schedule.enabled": false,
+				},
+			});
+
 			// 6. Channel Router: Direct delivery to messaging channels
 			// if (metadata && metadata.channel === "telegram" && metadata.chatId) {
 			// 	console.log(
@@ -83,6 +98,12 @@ const worker = new Worker(
 					logs: {
 						action: `Execution Core Crashed: ${error.message}`,
 					},
+				},
+			});
+
+			await Workflow.findByIdAndUpdate(workflowId, {
+				$set: {
+					"schedule.status": "FAILED",
 				},
 			});
 

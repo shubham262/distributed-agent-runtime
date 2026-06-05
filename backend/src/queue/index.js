@@ -6,14 +6,17 @@ export const workflowQueue = new Queue("workflow-execution", {
 });
 
 export const enqueueWorkflow = async (workflowId, runId, metadata = {}) => {
+	const { delay = 0, jobId, ...restMetadata } = metadata || {};
 	await workflowQueue.add(
 		"run-graph",
 		{
 			workflowId,
 			runId,
-			metadata,
+			metadata: restMetadata,
 		},
 		{
+			delay,
+			jobId: jobId || runId,
 			attempts: 3,
 			backoff: {
 				type: "exponential",
