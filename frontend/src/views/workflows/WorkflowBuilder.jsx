@@ -1,7 +1,13 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	Background,
 	Controls,
@@ -43,7 +49,7 @@ import {
 	FiSettings,
 	FiZap,
 } from "react-icons/fi";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { createAgent, editAgent, getAllAgent } from "@/service/agent";
 import {
 	createWorkflow,
@@ -78,7 +84,8 @@ const sanitizeNode = (node) => {
 };
 
 const sanitizeEdge = (edge) => {
-	const { selected, animated, style, focusable, interactionWidth, ...rest } = edge;
+	const { selected, animated, style, focusable, interactionWidth, ...rest } =
+		edge;
 	return rest;
 };
 
@@ -143,7 +150,14 @@ const normalizeGraph = (uiGraph = {}, agents = []) => {
 	};
 };
 
-const NodeFrame = ({ accentClass, icon, title, subtitle, children, selected }) => (
+const NodeFrame = ({
+	accentClass,
+	icon,
+	title,
+	subtitle,
+	children,
+	selected,
+}) => (
 	<div
 		className={`min-w-[220px] rounded-2xl border bg-white shadow-lg ${
 			selected ? "ring-2 ring-blue-400" : "border-slate-200"
@@ -156,7 +170,9 @@ const NodeFrame = ({ accentClass, icon, title, subtitle, children, selected }) =
 					{icon}
 				</div>
 				<div className="min-w-0 flex-1">
-					<p className="text-sm font-semibold text-slate-900 truncate">{title}</p>
+					<p className="text-sm font-semibold text-slate-900 truncate">
+						{title}
+					</p>
 					<p className="text-xs text-slate-500 line-clamp-2">{subtitle}</p>
 				</div>
 			</div>
@@ -283,8 +299,11 @@ const nodeTypes = {
 	conditional: ConditionalNode,
 };
 
-const WorkflowBuilderCanvas = ({ workflowId }) => {
+const WorkflowBuilderCanvas = () => {
 	const router = useRouter();
+	const params = useParams();
+	const workflowId = params?.id;
+
 	const [workflowForm] = Form.useForm();
 	const [agentForm] = Form.useForm();
 	const [nodeForm] = Form.useForm();
@@ -296,7 +315,8 @@ const WorkflowBuilderCanvas = ({ workflowId }) => {
 	const [drawerOpen, setDrawerOpen] = useState(false);
 	const [selectedNode, setSelectedNode] = useState(null);
 	const [agentModalOpen, setAgentModalOpen] = useState(false);
-	const [creatingAgentPlacement, setCreatingAgentPlacement] = useState("canvas");
+	const [creatingAgentPlacement, setCreatingAgentPlacement] =
+		useState("canvas");
 	const [isInitialized, setIsInitialized] = useState(false);
 	const viewportRef = useRef({ x: 0, y: 0, zoom: 1 });
 	const { fitView, setViewport } = useReactFlow();
@@ -376,7 +396,10 @@ const WorkflowBuilderCanvas = ({ workflowId }) => {
 	);
 
 	const addLoopNode = useCallback(() => {
-		setNodes((currentNodes) => [...currentNodes, makeLoopNode(currentNodes.length)]);
+		setNodes((currentNodes) => [
+			...currentNodes,
+			makeLoopNode(currentNodes.length),
+		]);
 	}, [setNodes]);
 
 	const addConditionalNode = useCallback(() => {
@@ -425,6 +448,7 @@ const WorkflowBuilderCanvas = ({ workflowId }) => {
 			try {
 				setWorkflowLoading(true);
 				const workflow = await getWorkflowById(workflowId);
+				console.log("Loaded workflow:", workflow);
 				if (cancelled) return;
 
 				const graph = normalizeGraph(workflow.uiGraph, workflow.agents || []);
@@ -515,11 +539,7 @@ const WorkflowBuilderCanvas = ({ workflowId }) => {
 			console.error("Create agent failed:", error);
 			message.error("Unable to create agent.");
 		}
-	}, [
-		addAgentNodeToCanvas,
-		agentForm,
-		creatingAgentPlacement,
-	]);
+	}, [addAgentNodeToCanvas, agentForm, creatingAgentPlacement]);
 
 	const handleSaveNode = useCallback(async () => {
 		if (!selectedNode) return;
@@ -546,7 +566,9 @@ const WorkflowBuilderCanvas = ({ workflowId }) => {
 
 				setAgents((current) =>
 					current.map((agent) =>
-						String(agent._id) === String(updatedAgent._id) ? updatedAgent : agent
+						String(agent._id) === String(updatedAgent._id)
+							? updatedAgent
+							: agent
 					)
 				);
 				setNodes((currentNodes) =>
@@ -721,7 +743,9 @@ const WorkflowBuilderCanvas = ({ workflowId }) => {
 			<div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/60 p-5 shadow-sm md:flex-row md:items-end md:justify-between">
 				<div className="space-y-3">
 					<div className="flex items-center gap-2">
-						<Tag className="border-none bg-blue-50 text-blue-700">Workflow Studio</Tag>
+						<Tag className="border-none bg-blue-50 text-blue-700">
+							Workflow Studio
+						</Tag>
 						{workflowId ? (
 							<Tag className="border-none bg-emerald-50 text-emerald-700">
 								Editing existing workflow
@@ -752,7 +776,9 @@ const WorkflowBuilderCanvas = ({ workflowId }) => {
 							<Form.Item
 								name="name"
 								label="Workflow Name"
-								rules={[{ required: true, message: "Workflow name is required" }]}
+								rules={[
+									{ required: true, message: "Workflow name is required" },
+								]}
 								className="m-0"
 							>
 								<Input placeholder="Enter workflow name" />
@@ -776,16 +802,10 @@ const WorkflowBuilderCanvas = ({ workflowId }) => {
 					<Button icon={<FiPlus />} onClick={openCreateAgentModal}>
 						New Agent
 					</Button>
-					<Button
-						icon={<FiLayers />}
-						onClick={addLoopNode}
-					>
+					<Button icon={<FiLayers />} onClick={addLoopNode}>
 						Add Loop
 					</Button>
-					<Button
-						icon={<FiActivity />}
-						onClick={addConditionalNode}
-					>
+					<Button icon={<FiActivity />} onClick={addConditionalNode}>
 						Add Conditional
 					</Button>
 					<Button
@@ -818,12 +838,18 @@ const WorkflowBuilderCanvas = ({ workflowId }) => {
 					<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-3">
 						<div className="flex items-center justify-between gap-3">
 							<div>
-								<p className="text-sm font-medium text-slate-900">Create agent</p>
+								<p className="text-sm font-medium text-slate-900">
+									Create agent
+								</p>
 								<p className="text-xs text-slate-500">
 									Build a new agent without leaving the studio.
 								</p>
 							</div>
-							<Button type="primary" className="bg-blue-600" onClick={openCreateAgentModal}>
+							<Button
+								type="primary"
+								className="bg-blue-600"
+								onClick={openCreateAgentModal}
+							>
 								Add
 							</Button>
 						</div>
@@ -853,16 +879,25 @@ const WorkflowBuilderCanvas = ({ workflowId }) => {
 													{agent.name}
 												</p>
 												<Badge
-													status={agent.status === "RUNNING" ? "processing" : "default"}
+													status={
+														agent.status === "RUNNING"
+															? "processing"
+															: "default"
+													}
 												/>
 											</div>
-											<p className="mt-0.5 text-xs text-slate-500">{agent.role}</p>
+											<p className="mt-0.5 text-xs text-slate-500">
+												{agent.role}
+											</p>
 											<div className="mt-2 flex flex-wrap gap-1">
 												<Tag className="m-0 border-none bg-slate-100 text-slate-600">
 													{agent.model || "gpt-4o-mini"}
 												</Tag>
 												{(agent.tools || []).slice(0, 2).map((tool) => (
-													<Tag key={tool} className="m-0 border-none bg-blue-50 text-blue-700">
+													<Tag
+														key={tool}
+														className="m-0 border-none bg-blue-50 text-blue-700"
+													>
 														{tool}
 													</Tag>
 												))}

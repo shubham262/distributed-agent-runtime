@@ -5,6 +5,6 @@ export const metadata = {
 	description: "Open an existing workflow in the builder",
 };
 
-export default function Page({ params }) {
-	return <WorkflowBuilder workflowId={params.id} />;
+export default function Page() {
+	return <WorkflowBuilder />;
 }
