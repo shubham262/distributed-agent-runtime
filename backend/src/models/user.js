@@ -16,6 +16,11 @@ const userSchema = new mongoose.Schema(
 			type: Boolean,
 			default: false,
 		},
+		telegram: {
+			type: mongoose.Schema.Types.Mixed,
+			default: {},
+			required: false,
+		},
 	},
 	{ timestamps: true }
 );

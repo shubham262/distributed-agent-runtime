@@ -12,10 +12,12 @@ import {
 	FiArrowRight,
 	FiRefreshCw,
 	FiClock,
+	FiMessageSquare,
+	FiCheckCircle,
 } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { getAllAgent } from "@/service/agent";
-import { getAllRuns, getAllWorkflows } from "@/service/workflow";
+import { getAllWorkflows, getAllRuns } from "@/service/workflow";
 import {
 	aggregateRunMetrics,
 	formatEstimatedCost,
@@ -25,13 +27,22 @@ import {
 	getWorkflowName,
 	statusColor,
 } from "@/lib/runUtils";
+import { useSelector } from "react-redux";
 
 const Overview = () => {
 	const router = useRouter();
+	const authInfo = useSelector((state) => state.auth);
+	const { userInfo } = authInfo || {};
 	const [loading, setLoading] = useState(true);
 	const [workflows, setWorkflows] = useState([]);
 	const [agents, setAgents] = useState([]);
 	const [runs, setRuns] = useState([]);
+
+	console.log("User Info:", userInfo);
+
+	const BOT_USERNAME = "AgentOS_Official_bot";
+	const isTelegramConnected = !!userInfo?.telegram?.chatId;
+	const telegramDeepLink = `https://t.me/${BOT_USERNAME}?start=${userInfo?.id}`;
 
 	const loadDashboard = useCallback(async () => {
 		try {
@@ -300,6 +311,44 @@ const Overview = () => {
 					<div className="text-xs font-medium text-slate-400">
 						Estimated from token usage across {runs.length} runs
 					</div>
+				</div>
+			</div>
+
+			<div className="flex w-full flex-col items-start justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
+				<div className="flex items-center gap-3">
+					<div className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-lg text-blue-600 shadow-sm">
+						<FiMessageSquare />
+					</div>
+					<div className="flex flex-col">
+						<p className="mb-0.5 text-sm font-semibold text-slate-800">
+							AgentOS Telegram Channel Link
+						</p>
+						<p className="text-xs font-medium text-slate-400 max-w-xl">
+							{isTelegramConnected
+								? `Linked account pipeline active. Reports will broadcast securely via @${
+										user.telegram.username || "VerifiedNode"
+								  }.`
+								: "Link your phone gateway instance to dispatch real-time multi-agent execution reports and tool metrics directly into chat notifications."}
+						</p>
+					</div>
+				</div>
+
+				<div>
+					{!isTelegramConnected ? (
+						<Button
+							type="primary"
+							icon={<FiMessageSquare size={13} />}
+							href={telegramDeepLink}
+							target="_blank"
+							className="flex h-8 items-center justify-center border-none bg-blue-600 text-xs font-semibold shadow-sm hover:bg-blue-500 w-full sm:w-auto px-4"
+						>
+							Connect Telegram
+						</Button>
+					) : (
+						<div className="flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50/60 px-3 py-1.5 text-xs font-bold text-emerald-800">
+							<FiCheckCircle className="text-emerald-600" /> Connected
+						</div>
+					)}
 				</div>
 			</div>
 

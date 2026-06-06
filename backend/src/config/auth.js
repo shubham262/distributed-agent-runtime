@@ -11,6 +11,11 @@ export const handleBetterAuth = async () => {
 		emailAndPassword: {
 			enabled: true,
 		},
+		telegram: {
+			type: "object",
+			required: false,
+			defaultValue: {},
+		},
 		secret: process.env.BETTER_AUTH_SECRET,
 
 		baseURL: "http://localhost:3001",

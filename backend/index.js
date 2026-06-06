@@ -4,6 +4,7 @@ import { handleBetterAuth } from "./src/config/auth.js";
 import { toNodeHandler } from "better-auth/node";
 import agentRoutes from "./src/routes/agentRoute.js";
 import workflowRoutes from "./src/routes/workflowRoute.js";
+import telegramRoutes from "./src/routes/telegramRoute.js";
 import "./src/worker/index.js";
 
 const app = express();
@@ -18,8 +19,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use("/api/auth", toNodeHandler(auth));
+app.use("/api/telegram", telegramRoutes);
 app.use("/api/agents", agentRoutes);
 app.use("/api/workflows", workflowRoutes);
+
 app.listen(PORT, () => {
 	console.log(`Server is running on port ${PORT}`);
 });
