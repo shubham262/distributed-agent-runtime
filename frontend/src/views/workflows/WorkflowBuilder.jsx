@@ -253,9 +253,33 @@ const makeConditionalNode = (index = 0) => ({
 
 const normalizeGraph = (uiGraph = {}, agents = []) => {
 	const viewport = uiGraph.viewport || { x: 0, y: 0, zoom: 1 };
-	const nodes = Array.isArray(uiGraph.nodes) ? [...uiGraph.nodes] : [];
+	let nodes = Array.isArray(uiGraph.nodes) ? [...uiGraph.nodes] : [];
 	const edges = Array.isArray(uiGraph.edges) ? [...uiGraph.edges] : [];
 
+	// 1. Create a lookup map of up-to-date agent records from the database
+	const agentLookup = new Map(
+		agents.map((agent) => [String(agent._id), agent])
+	);
+
+	// 2. Hydrate agent nodes with the full, fresh agent objects
+	nodes = nodes.map((node) => {
+		if (node.type === "agent" && node.data?.agentId) {
+			const freshAgentData = agentLookup.get(String(node.data.agentId));
+			if (freshAgentData) {
+				return {
+					...node,
+					data: {
+						...node.data,
+						label: freshAgentData.name, // Keeps UI labels synchronized
+						agent: freshAgentData, // Hydrates the full doc for the drawer form
+					},
+				};
+			}
+		}
+		return node;
+	});
+
+	// 3. Keep your existing fallbacks for empty or boundary-missing graphs
 	if (nodes.length === 0) {
 		if (agents.length === 0) {
 			return createDefaultGraph();
