@@ -1,6 +1,4 @@
-Here is your complete, production-ready `README.md` file with the **Live Demo Video** link integrated into a prominent video preview section at the top, perfectly tailored to fulfill all evaluation criteria for the challenge.
 
----
 
 # 🤖 AgentOS: Multi-Agent Orchestration & Automation Platform
 
@@ -163,7 +161,7 @@ SENDERS_EMAIL_ID=your_system_email@gmail.com
 SENDERS_PASSWORD=your_app_specific_password_here
 
 # Telegram Messaging Endpoint Security
-TELEGRAM_BOT_TOKEN=8842939716:AAHFMVhaJlDihAEWIxZk0lWQft_cGZ5QkwA
+TELEGRAM_BOT_TOKEN=Add your bot token
 
 ```
 
@@ -195,46 +193,6 @@ The background initialization loop automatically fetches the dynamic public gate
 * **Backend API Gateway Node:** `http://localhost:3001`
 * **Local Ngrok Diagnostic Interface:** `http://localhost:4040`
 
----
-
-🛠️ Developer Extension Guidelines 
-
-How to add a new Workflow Template 
-
-To seed additional workflow options natively to all onboarding user profiles, update the structural blueprint collection layout inside `backend/src/config/seedTemplates.js`:
-
-1. Define an identifier name, description, and agent configuration attributes inside the `seedTemplates` array:
-```javascript
-{
-    name: "Social Media Distribution Automator",
-    description: "Translates product copies into cross-channel optimized marketing updates.",
-    agents: [ { key: "copywriter", name: "SocialAgent", role: "Copy generation", model: "gpt-4o-mini", tools: [], channels: ["ui"] } ],
-    generateUiGraph: (agentIdMap) => ({
-        nodes: [ /* React Flow Node Coordinates using agentIdMap["copywriter"] */ ],
-        edges: [ /* Connectors Mapping */ ]
-    })
-}
-
-```
 
 
-2. The registration event handler automatically picks up your new structural definition during the next signup flow iteration sequence.
 
-How to add an alternative Messaging Channel 
-
-To connect an additional third-party network endpoint layer (e.g., Slack or WhatsApp):
-
-1. 
-**Schema Registry:** Append your channel string value token target down inside your model schema validator options array tracking inside `backend/src/models/Agent.js`.
-
-
-2. **Webhook Controller Router:** Construct an incoming message processing interface route module inside `backend/src/controllers/` (e.g., `slackWebhookController.js`). Map user identification targets to the internal MongoDB User ID scope.
-3. **Master Service Bind:** Pass conversational input metrics down through your main core query executor:
-```javascript
-const masterAgentResponseText = await executeMasterAgentQuery(userDoc._id, slackChannelId, rawTextPayload);
-
-```
-
-
-4. 
-**Outbound Worker Forwarding:** Inside the background worker pipeline configuration logic block (`backend/src/queue/worker.js`), un-comment the routing loop hooks to trigger a direct messaging response back down through the channel whenever execution traces hit `COMPLETED` or `FAILED` states.
