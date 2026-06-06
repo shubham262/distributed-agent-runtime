@@ -5,7 +5,7 @@ dotenv.config();
 
 const registerTelegramWebhook = async () => {
 	// 1. Capture arguments from terminal execution (e.g., node registerWebhook.js https://xxxx.ngrok-free.app)
-	const tunnelUrl = process.argv[2];
+	let tunnelUrl = process.argv[2];
 	const token = process.env.TELEGRAM_BOT_TOKEN;
 	console.log(`🚀 Starting Telegram Webhook Registration Script...`, token);
 	if (!tunnelUrl) {
@@ -13,7 +13,19 @@ const registerTelegramWebhook = async () => {
 		console.log(
 			"Usage: node src/scripts/registerWebhook.js https://your-tunnel-url.ngrok-free.app"
 		);
-		process.exit(1);
+
+		try {
+			// 2. Query the local ngrok client agent interface API
+			// const response = await axios.get("http://127.0.0.1:4040/api/tunnels");
+			const response = await axios.get("http://ngrok:4040/api/tunnels");
+
+			tunnelUrl = response.data.tunnels[0]?.public_url;
+			console.log(
+				`📡 Automatically fetched Ngrok tunnel endpoint: ${tunnelUrl}`
+			);
+		} catch (err) {
+			console.log("ℹ️ Local Ngrok instance not found. Ensure it is active.");
+		}
 	}
 
 	if (!token) {

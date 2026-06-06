@@ -1,0 +1,71 @@
+version: "3.8"
+
+services:
+  # 1. Database layer
+  mongodb:
+    image: mongo:latest
+    container_name: agentos-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  # 2. Redis cluster layer for BullMQ
+  redis:
+    image: redis:alpine
+    container_name: agentos-cache
+    ports:
+      - "6379:6379"
+
+  # 3. Dynamic ngrok webhook proxy tunnel agent
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: agentos-tunnel
+    command: http backend:3001
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    depends_on:
+      - backend
+
+  # 4. Asynchronous backend orchestration node
+  backend:
+    build: ./backend
+    container_name: agentos-backend
+    command: >
+      sh -c "npm install && 
+             node --import ./env.js src/scripts/index.js && 
+             npm run dev"
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./backend/.env
+
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/ai_orchestration
+      - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+      - redis
+
+  frontend:
+    build: ./frontend
+    container_name: agentos-frontend
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+
+volumes:
+  mongo-data:
