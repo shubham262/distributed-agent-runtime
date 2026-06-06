@@ -5,7 +5,7 @@ import { executeMasterAgentQuery } from "../service/masterAgentService.js";
 
 const { User } = db;
 
-const sendBotReply = async (chatId, text) => {
+export const sendBotReply = async (chatId, text) => {
 	const token = process.env.TELEGRAM_BOT_TOKEN;
 	const url = `https://api.telegram.org/bot${token}/sendMessage`;
 	try {
@@ -101,7 +101,8 @@ export const handleTelegramWebhook = async (req, res) => {
 		const agentOutputSummary = await executeMasterAgentQuery(
 			userScope._id,
 			chatId,
-			text
+			text,
+			userScope
 		);
 
 		// Transmit final processed analytical feedback payload directly back to the user

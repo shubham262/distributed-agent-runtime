@@ -10,7 +10,7 @@ export const seedTemplates = [
 				key: "researcher",
 				name: "InsightScout",
 				role: "Autonomous web research and market intelligence synthesis",
-				model: "gpt-4o",
+				model: "gpt-4o-mini",
 				tools: ["web-search"],
 				channels: ["telegram"],
 				systemPrompt:
@@ -120,7 +120,7 @@ export const seedTemplates = [
 				key: "writer",
 				name: "ContentArchitect",
 				role: "Long-form search intent content writing engine",
-				model: "gpt-4o",
+				model: "gpt-4o-mini",
 				tools: ["web-search"],
 				channels: ["ui"],
 				systemPrompt:

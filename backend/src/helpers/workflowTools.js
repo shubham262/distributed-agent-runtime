@@ -241,13 +241,14 @@ export const executeWorkflowLangChainTool = tool(
 		try {
 			const userId = config.configurable?.userId;
 			const userData = config.configurable?.user || { id: userId };
+			const chatId = config.configurable?.chatId;
 			if (!userId)
 				return "❌ Error: Unauthenticated execution envelope context window.";
 
 			const runId = await workflowService.handleExecuteWorkflow(
 				workflowId,
 				userId,
-				{ prompt, metadata: { channel: "telegram" } },
+				{ prompt, metadata: { channel: "telegram", chatId } },
 				userData
 			);
 

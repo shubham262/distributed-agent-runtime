@@ -3,6 +3,7 @@ import { HumanMessage } from "@langchain/core/messages";
 import { connection } from "../config/redis.js";
 import db from "../models/index.js";
 import { compileWorkflow } from "../helpers/compiler.js";
+import { sendBotReply } from "../controllers/telegramController.js";
 
 const { WorkflowRun, Workflow } = db;
 
@@ -96,12 +97,12 @@ const worker = new Worker(
 			});
 
 			// 6. Channel Router: Direct delivery to messaging channels
-			// if (metadata && metadata.channel === "telegram" && metadata.chatId) {
-			// 	console.log(
-			// 		`📱 Routing pipeline results directly to Telegram Chat: ${metadata.chatId}`
-			// 	);
-			// 	await sendTelegramMessage(metadata.chatId, finalOutput);
-			// }
+			if (metadata && metadata.channel === "telegram" && metadata.chatId) {
+				console.log(
+					`📱 Routing pipeline results directly to Telegram Chat: ${metadata.chatId}`
+				);
+				await sendBotReply(metadata.chatId, finalOutput);
+			}
 
 			return finalOutput;
 		} catch (error) {
@@ -128,12 +129,12 @@ const worker = new Worker(
 				},
 			});
 
-			// if (metadata && metadata.channel === "telegram" && metadata.chatId) {
-			// 	await sendTelegramMessage(
-			// 		metadata.chatId,
-			// 		`⚠️ Operational Error: Your workflow execution encountered a technical failure during processing.`
-			// 	);
-			// }
+			if (metadata && metadata.channel === "telegram" && metadata.chatId) {
+				await sendBotReply(
+					metadata.chatId,
+					`⚠️ Operational Error: Your workflow execution encountered a technical failure during processing.`
+				);
+			}
 
 			throw error;
 		}

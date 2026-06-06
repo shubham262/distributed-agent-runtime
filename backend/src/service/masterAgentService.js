@@ -86,7 +86,12 @@ const masterAgentExecutor = createReactAgent({
  * @param {string} chatId - Telegram numeric chat identification parameter used as the conversation memory thread id
  * @param {string} inputMessage - Raw input text message from user
  */
-export const executeMasterAgentQuery = async (userId, chatId, inputMessage) => {
+export const executeMasterAgentQuery = async (
+	userId,
+	chatId,
+	inputMessage,
+	user
+) => {
 	try {
 		const responseState = await masterAgentExecutor.invoke(
 			{
@@ -95,7 +100,9 @@ export const executeMasterAgentQuery = async (userId, chatId, inputMessage) => {
 			{
 				configurable: {
 					thread_id: String(chatId), // Isolates conversation context memory to this specific Telegram screen
-					userId: String(userId), // Passes securely downward down into individual target data-layer service calls
+					userId: String(userId), // Passes securely downward down into individual target data-layer service calls,
+					user,
+					chatId,
 				},
 			}
 		);
