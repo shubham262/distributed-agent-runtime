@@ -3,7 +3,7 @@ import { z } from "zod";
 import tvly from "../config/tavily.js";
 import transporter from "../config/nodemailer.js";
 
-const webSearch = tool(
+export const webSearch = tool(
 	async ({ query, maxResults }) => {
 		const response = await tvly.search(query, {
 			searchDepth: "advanced",
@@ -42,7 +42,7 @@ const webSearch = tool(
 const RESEARCH_POLL_INTERVAL_MS = 3000;
 const RESEARCH_MAX_POLLS = 40; // ~2 minutes ceiling
 
-const deepResearch = tool(
+export const deepResearch = tool(
 	async ({ query, model, citationFormat }) => {
 		const initiated = await tvly.research(query, {
 			model: model ?? "auto",
@@ -98,7 +98,7 @@ const deepResearch = tool(
 		}),
 	}
 );
-const sendEmail = tool(
+export const sendEmail = tool(
 	async ({ to, subject, body, html }) => {
 		const mailOptions = {
 			from: process.env.SENDERS_EMAIL_ID,

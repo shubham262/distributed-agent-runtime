@@ -1,6 +1,8 @@
 import axios from "axios";
 import db from "../models/index.js";
 import mongoose from "mongoose";
+import { executeMasterAgentQuery } from "../service/masterAgentService.js";
+
 const { User } = db;
 
 const sendBotReply = async (chatId, text) => {
@@ -28,7 +30,10 @@ export const handleTelegramWebhook = async (req, res) => {
 
 		if (!message || !message.text) return;
 
-		console.log(`📩 Received Telegram Message:`, message);
+		console.log(
+			`📩 Received Telegram Message from [Chat ID: ${message.chat.id}]:`,
+			message.text
+		);
 		const chatId = message.chat.id;
 		const text = message.text.trim();
 
@@ -50,7 +55,12 @@ export const handleTelegramWebhook = async (req, res) => {
 					telegram: {
 						chatId: String(chatId),
 						username:
-							message.from.first_name + " " + message.from.last_name ||
+							message.from.username ||
+							(
+								(message.from.first_name || "") +
+								" " +
+								(message.from.last_name || "")
+							).trim() ||
 							"Anonymous",
 						connectedAt: new Date(),
 					},
@@ -66,16 +76,36 @@ export const handleTelegramWebhook = async (req, res) => {
 				return;
 			}
 
-			// 5. Fire an authorization receipt confirmation straight back to their phone
 			await sendBotReply(
 				chatId,
-				`✨ *AgentOS Pipeline Linked!*\n\nHello *${updatedUser.name}*,\nYour messaging tunnel is fully integrated. Background workflow nodes will now route execution summaries and diagnostic telemetry parameters directly to this secure channel.`
+				`✨ *AgentOS Pipeline Linked!*\n\nHello *${updatedUser.name}*,\nYour messaging tunnel is fully integrated. You can now talk to me naturally to perform CRUD actions on your workflows, list your agents, query system metrics, or run background processes!`
 			);
 
 			console.log(
 				`📡 Linked Telegram Node: Chat ID [${chatId}] mapped to Database User ID [${userId}]`
 			);
+			return;
 		}
+
+		const userScope = await User.findOne({ "telegram.chatId": String(chatId) });
+
+		if (!userScope) {
+			await sendBotReply(
+				chatId,
+				"🔒 *Access Forbidden:*\nYour Telegram endpoint has not been linked to an active user container context.\n\nPlease authenticate and export your connection link parameter token from your secure web dashboard canvas."
+			);
+			return;
+		}
+
+		// Pass conversation downstream into the tool-binding LangGraph system
+		const agentOutputSummary = await executeMasterAgentQuery(
+			userScope._id,
+			chatId,
+			text
+		);
+
+		// Transmit final processed analytical feedback payload directly back to the user
+		await sendBotReply(chatId, agentOutputSummary);
 	} catch (error) {
 		console.error("🚨 Telegram Webhook Runtime Crash:", error);
 	}

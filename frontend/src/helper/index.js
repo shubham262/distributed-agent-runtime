@@ -1,5 +1,9 @@
 export const serializeUser = (user) => ({
 	...user,
+	telegram: {
+		...user.telegram,
+		connectedAt: user.telegram?.connectedAt?.toISOString?.(),
+	},
 	createdAt: user.createdAt?.toISOString?.(),
 	updatedAt: user.updatedAt?.toISOString?.(),
 });

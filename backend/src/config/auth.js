@@ -11,10 +11,14 @@ export const handleBetterAuth = async () => {
 		emailAndPassword: {
 			enabled: true,
 		},
-		telegram: {
-			type: "object",
-			required: false,
-			defaultValue: {},
+		user: {
+			additionalFields: {
+				telegram: {
+					type: "object",
+					required: false,
+					defaultValue: {},
+				},
+			},
 		},
 		secret: process.env.BETTER_AUTH_SECRET,
 

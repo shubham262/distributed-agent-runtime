@@ -38,7 +38,7 @@ const Overview = () => {
 	const [agents, setAgents] = useState([]);
 	const [runs, setRuns] = useState([]);
 
-	console.log("User Info:", userInfo);
+	// console.log("User Info:", userInfo);
 
 	const BOT_USERNAME = "AgentOS_Official_bot";
 	const isTelegramConnected = !!userInfo?.telegram?.chatId;
@@ -326,7 +326,7 @@ const Overview = () => {
 						<p className="text-xs font-medium text-slate-400 max-w-xl">
 							{isTelegramConnected
 								? `Linked account pipeline active. Reports will broadcast securely via @${
-										user.telegram.username || "VerifiedNode"
+										userInfo?.telegram?.username || "VerifiedNode"
 								  }.`
 								: "Link your phone gateway instance to dispatch real-time multi-agent execution reports and tool metrics directly into chat notifications."}
 						</p>

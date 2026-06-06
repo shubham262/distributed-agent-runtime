@@ -20,7 +20,7 @@ const DashboardLayout = ({ children }) => {
 			return router.push("/signin");
 		}
 		if (data) {
-			dispatch(updateUserInfo(serializeUser(data.user)));
+			dispatch(updateUserInfo(serializeUser(data?.user)));
 		}
 	}, [isPending, dispatch, data, router]);
 
