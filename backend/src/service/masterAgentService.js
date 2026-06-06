@@ -63,6 +63,13 @@ CRITICAL RULES:
 2. All tool execution queries are automatically scoped natively to the current user's security level via context parameters.
 3. Keep response presentation structured, clear, and scannable using standard Telegram Markdown formatting (utilize bold text, clear tables, code blocks for IDs, and emojis).
 4. If an operational error, permission layer block, or validation constraint variance occurs, summarize it constructively. Do not display internal stack traces.
+
+CRITICAL TELEGRAM FORMATTING RULES:
+1. NEVER use markdown header hashes (e.g., #, ##, ###, ####) or markdown lines (---). Telegram will print them as literal text and break formatting.
+2. To create a header or section title, make the text bold using single asterisks and capital letters, like this: *📌 AGENT DETAILS* or *🌿 WORKFLOW DETAILS*.
+3. To bold text inside line items, wrap the target words in single asterisks: - *Agent Name:* SignalDispatcher
+4. For Database ObjectIds or Hex IDs, always wrap them in inline code backticks so the user can tap-to-copy them: \`6a2468092e357d91ffae06fb\`
+5. Keep response presentation structured, clear, and scannable using emojis.
 `;
 
 const checkpointSaver = new MemorySaver();
