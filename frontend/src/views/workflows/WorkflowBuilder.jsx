@@ -348,7 +348,11 @@ const toWorkflowUpdate = (workflow = {}) => ({
 	isActive: workflow.isActive ?? true,
 });
 
-const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
+const WorkflowBuilderCanvas = ({
+	workflowId: workflowIdProp,
+	prompt,
+	setPrompt,
+}) => {
 	const router = useRouter();
 	const params = useParams();
 	const workflowId = workflowIdProp ?? params?.id;
@@ -880,6 +884,8 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 								>
 									<TextArea
 										rows={2}
+										value={prompt}
+										onChange={(e) => setPrompt(e.target.value)}
 										placeholder="Configure a default runtime prompt or starting context to seed state machine execution for this agent flow..."
 										className="rounded-xl border-slate-200 focus:border-blue-500"
 									/>
@@ -1133,10 +1139,14 @@ const WorkflowBuilderCanvas = ({ workflowId: workflowIdProp }) => {
 	);
 };
 
-const WorkflowBuilder = ({ workflowId }) => {
+const WorkflowBuilder = ({ workflowId, prompt, setPrompt }) => {
 	return (
 		<ReactFlowProvider>
-			<WorkflowBuilderCanvas workflowId={workflowId} />
+			<WorkflowBuilderCanvas
+				workflowId={workflowId}
+				prompt={prompt}
+				setPrompt={setPrompt}
+			/>
 		</ReactFlowProvider>
 	);
 };

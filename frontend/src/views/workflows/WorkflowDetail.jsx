@@ -52,8 +52,6 @@ const statusColor = (status) => {
 	return "default";
 };
 
-
-
 const formatOutputRaw = (output) => {
 	if (!output) return "";
 	if (typeof output === "string") return output;
@@ -90,7 +88,7 @@ const WorkflowDetail = () => {
 	const params = useParams();
 	const workflowId = params?.id;
 	const [scheduleForm] = Form.useForm();
-	const [promptForm] = Form.useForm();
+	const [prompt, setPrompt] = useState("");
 	const [workflow, setWorkflow] = useState(null);
 	const [runs, setRuns] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -174,10 +172,9 @@ const WorkflowDetail = () => {
 
 	const handlePublishSubmit = useCallback(async () => {
 		try {
-			const values = await promptForm.validateFields();
 			setPublishing(true);
 			const response = await playWorkflow(workflowId, {
-				prompt: values.prompt?.trim() || "",
+				prompt: prompt?.trim() || "",
 				metadata: {
 					source: "publish",
 				},
@@ -194,7 +191,7 @@ const WorkflowDetail = () => {
 		} finally {
 			setPublishing(false);
 		}
-	}, [openRun, promptForm, refreshAll, workflowId]);
+	}, [openRun, prompt, refreshAll, workflowId]);
 
 	const handleDeleteWorkflow = useCallback(async () => {
 		try {
@@ -221,7 +218,7 @@ const WorkflowDetail = () => {
 				metadata: {
 					source: "schedule",
 				},
-				prompt: values.prompt?.trim() || "",
+				prompt: prompt?.trim() || "",
 			});
 			message.success("Workflow scheduled successfully.");
 			setScheduleOpen(false);
@@ -236,7 +233,7 @@ const WorkflowDetail = () => {
 		} finally {
 			setSavingSchedule(false);
 		}
-	}, [openRun, refreshAll, scheduleForm, workflowId]);
+	}, [openRun, refreshAll, prompt, scheduleForm, workflowId]);
 
 	const columns = useMemo(
 		() => [
@@ -292,6 +289,8 @@ const WorkflowDetail = () => {
 	const selectedRunLogs = selectedRun?.logs || [];
 	const selectedRunMessages = selectedRun?.graphState?.messages || [];
 	const selectedWorkflow = workflow || {};
+
+	console.log("prompt", prompt);
 
 	return (
 		<div className="space-y-5">
@@ -378,7 +377,13 @@ const WorkflowDetail = () => {
 				</Card>
 			</div>
 
-			{workflowId ? <WorkflowBuilder workflowId={workflowId} /> : null}
+			{workflowId ? (
+				<WorkflowBuilder
+					workflowId={workflowId}
+					prompt={prompt}
+					setPrompt={setPrompt}
+				/>
+			) : null}
 
 			<section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
 				<div className="mb-4 flex items-center justify-between gap-3">
