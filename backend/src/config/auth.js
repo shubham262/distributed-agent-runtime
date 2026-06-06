@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { handleMongoDBConnection } from "./index.js";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
+import { seedUserWorkspace } from "../scripts/seed.js";
 
 let auth = null;
 export const handleBetterAuth = async () => {
@@ -24,6 +25,15 @@ export const handleBetterAuth = async () => {
 
 		baseURL: "http://localhost:3001",
 		trustedOrigins: ["http://localhost:3000"],
+		databaseHooks: {
+			user: {
+				create: {
+					after: async (user) => {
+						await seedUserWorkspace(user?.id);
+					},
+				},
+			},
+		},
 	});
 	return auth;
 };

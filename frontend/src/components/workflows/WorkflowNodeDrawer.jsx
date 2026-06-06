@@ -206,13 +206,15 @@ const WorkflowNodeDrawer = ({
 							<Form.Item
 								name="maxIterations"
 								label="Max iterations"
-								rules={[{ required: true, message: "Max iterations is required" }]}
+								rules={[
+									{ required: true, message: "Max iterations is required" },
+								]}
 							>
 								<InputNumber min={1} max={100} className="w-full" />
 							</Form.Item>
 							<p className="text-xs text-slate-500">
-								Loop runs the body up to N times. Wire entry (top), body (right),
-								back (left), and exit (bottom) handles.
+								Loop runs the body up to N times. Wire entry (top), body
+								(right), back (left), and exit (bottom) handles.
 							</p>
 							<Form.Item
 								name="enableBreakRule"
@@ -239,8 +241,8 @@ const WorkflowNodeDrawer = ({
 								<Input />
 							</Form.Item>
 							<p className="text-xs text-slate-500">
-								Validator/router — evaluates the rule against the last agent output
-								and routes to the true or false branch.
+								Validator/router — evaluates the rule against the last agent
+								output and routes to the true or false branch.
 							</p>
 							<RuleBuilder namePrefix="rule" label="Routing rule" required />
 							<div className="grid grid-cols-2 gap-3">

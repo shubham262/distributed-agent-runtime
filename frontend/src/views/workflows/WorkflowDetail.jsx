@@ -52,11 +52,7 @@ const statusColor = (status) => {
 	return "default";
 };
 
-const formatOutputPreview = (output) => {
-	if (!output) return "No output yet";
-	const text = typeof output === "string" ? output : String(output);
-	return text.replace(/\s+/g, " ").trim().slice(0, 120);
-};
+
 
 const formatOutputRaw = (output) => {
 	if (!output) return "";
